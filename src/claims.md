@@ -60,7 +60,7 @@ Extracted on 2026-10-28 from the security-claims page of vauchi.app/docs, itself
 - **Statement**: The two devices run a key agreement bound to both identity keys; a transcript of the QR codes alone yields no key, and a key agreed with the wrong identity fails.
 - **If false**: A bystander who photographs the exchange reads the cards exchanged.
 - **Status**: shipped
-- **Backed by**: Tamarin `qr_exchange.spthy`, lemmas `session_key_secrecy` and `no_misbinding`; tests `test_x3dh_identity_binding_wrong_key_fails`, `test_x3dh_zero_identity_rejected` and `test_x3dh_full_bidirectional_agreement` in `exchange_x3dh_tests.rs`
+- **Backed by**: Tamarin `qr_exchange.spthy`, lemmas `session_key_secrecy` and `no_misbinding` (falsified under `-DNO_IDENTITY_BINDING`); tests `test_transcript_binding_includes_identity_keys` and `test_transcript_binding_includes_ephemeral_keys` in `exchange_ceremony_tests.rs`, which exercise the symmetric derivation `vauchi-x3dh-symmetric-v2` the QR exchange uses (In-Person Exchange A4). The tests `test_x3dh_identity_binding_wrong_key_fails`, `test_x3dh_zero_identity_rejected` and `test_x3dh_full_bidirectional_agreement` in `exchange_x3dh_tests.rs` exercise the two-DH agreement of the relay-mediated exchange (Link and Relay-Mediated Exchange B2), not this one.
 - **Section**: [in-person-exchange](protocols/in-person-exchange.md)
 
 ## S7. A confirmation means the other side really confirmed
