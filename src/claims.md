@@ -101,11 +101,11 @@ Extracted on 2026-10-28 from the security-claims page of vauchi.app/docs, itself
 
 ## S11. Old messages stay secret after a compromise
 
-- **Attacker**: Someone holding a device, or a copy of its storage, taken at a point in time.
-- **Statement**: Each message uses a key deleted after use; taking the current ratchet state does not open earlier messages, and the channel heals once a fresh exchange of ephemeral keys happens.
-- **If false**: A stolen phone reveals every update ever received.
-- **Status**: shipped
-- **Backed by**: tests `test_dr_forward_secrecy`, `test_forward_secrecy_compromised_state` and `test_dr_skipped_message_limit` in `crypto_ratchet_tests.rs`
+- **Attacker**: Someone who recorded relay or network traffic and later obtains a device's keys, or a copy of its storage, taken at a point in time.
+- **Statement**: Each update between contacts uses a key deleted after use; taking the current ratchet state does not open earlier updates, and the channel heals once a fresh exchange of ephemeral keys happens.
+- **If false**: Recorded traffic plus a later compromise of the phone reveals every update ever received.
+- **Status**: partial
+- **Backed by**: tests `test_dr_forward_secrecy`, `test_forward_secrecy_compromised_state` and `test_dr_skipped_message_limit` in `crypto_ratchet_tests.rs`. Partial: two paths have no forward secrecy and the statement does not cover them. The first genesis message of a session (Card Update and Sync C5) resumes it at the first reply; every device-to-device sync batch (E2) is encrypted under a static-to-static agreement, so a later compromise of either device's exchange key opens every recorded batch, and those batches carry contacts, cards and ratchet states.
 - **Section**: [update-and-sync](protocols/update-and-sync.md)
 
 ## S12. Destroying the storage key makes the data unrecoverable
