@@ -5,7 +5,20 @@
 
 Each spec tag maps to the Core commit it was extracted from.
 
-## Unreleased (towards 0.1-draft)
+## Unreleased
+
+- The Attackers chapter and the conventions table of what holds each
+  statement true (spec!5); the claim-name CI check with its pending
+  list (spec!6); the image and deploy trigger for vauchi.app/spec
+  (spec!7). `contact_only_after_approval` left the pending list when
+  core!2066 put the round-8 models on Core `main`.
+
+## 0.1-draft (2026-10-28)
+
+Extracted from Core `612992b0b`, relay `9b869ac3b` and ohttp-relay
+`a4e7c6eed`; the claims audited against the chapters on Core `main`
+`56944aa62` the same day. Tag:
+<https://gitlab.com/vauchi/spec/-/tags/0.1-draft>.
 
 - Claims audited against the extracted chapters (2026-10-28): S7, S11
   and S17 become *partial* (the identity signature exists on the
