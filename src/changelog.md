@@ -7,6 +7,20 @@ Each spec tag maps to the Core commit it was extracted from.
 
 ## Unreleased (towards 0.1-draft)
 
+- Claims audited against the extracted chapters (2026-10-28): S7, S11
+  and S17 become *partial* (the identity signature exists on the
+  relay-sync confirmation tier only; device sync and the first genesis
+  message have no forward secrecy; the recovery rekey is a design);
+  S2 and S6 cite the tests that back them instead of a lemma without
+  a verdict and tests of another agreement; S4 names the fetcher's
+  cross-day linkability (vauchi/private#890) and the identity-keyed
+  relay routes; S10's attacker is the one its test covers; S13 says
+  the full backup has no password strength check
+  (vauchi/private#891). Chapters: a relayed NFC tap is not refused;
+  a contact's relay URL is stored, not routed by; the duress PIN's
+  hash is brute-forceable offline; the Glance nonce and the two
+  Bluetooth paths cite their issues (vauchi/private#892, #893).
+
 - Vectors: `backup_v6` added from Core `main` after core!2054, the
   file the app writes today, with its two Core tests named under S13.
   The sync chapter no longer describes the removed delivery-receipts

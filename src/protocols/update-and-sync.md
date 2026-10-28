@@ -199,7 +199,11 @@ can pick the right device-pair ratchet without the relay learning the
 sender device. An hourly anonymous sender id `HKDF(shared_key,
 "Vauchi_AnonymousSender_v2" || hour as LE u64)` exists for the legacy
 WebSocket envelope; the HTTP path does not send it. A message to the
-relay is at most 1 MiB (`MAX_MESSAGE_SIZE`).
+relay is at most 1 MiB (`MAX_MESSAGE_SIZE`). Every send goes to the
+relay in the client's own configuration: the relay URL a contact
+named in its QR is stored (In-Person Exchange A7) and carried on the
+pending update as `target_relay_url`, but nothing in the sync
+controller routes by it.
 
 **B9. Resync.** A contact may send `0x0a`; the receiver answers by
 repropagating its visible card, at most once per contact per day

@@ -442,7 +442,7 @@ from its card payload (`apply_ble_machine_event`). The older
 relay key `HKDF(X25519(e_ours, x_theirs), "vauchi-ble-relay-key-v1" ||
 sorted ids)` for the contact (`process_ble_phase4`); the two paths
 agree with themselves on both sides but not with each other, and only
-the app path is wired to a screen today.
+the app path is wired to a screen today (vauchi/private#893).
 
 **B13. Reciprocity over the link.** After its contact is durably
 saved, the initiator sends an ack: `0x01 || AEAD(SK, our_token; AAD =
@@ -500,7 +500,8 @@ app clears every Glance value when the exchange screen is left.
   the QR (`test_responder_rejects_wrong_oob_nonce_echo`). The echo
   travels in the clear in the KeyOffer, so a radio observer of a
   legitimate offer could race a replay of it; ADR-053 records this and
-  requires single-use nonces, which the code does not enforce yet:
+  requires single-use nonces, which the code does not enforce yet
+  (vauchi/private#892):
   the displayer accepts any offer with the right echo until the 60-second
   QR window closes or the exchange completes and the screen is left.
 - **Unlinkable advertisements.** A token derived from the identity key,
@@ -600,7 +601,8 @@ with the first synced update, as in A7.
 **C5. Trust.** An NFC exchange records proximity `High` and the
 transport's proximity class `Physical`, which makes the contact's trust
 level `High` without any further check (`Contact::trust_level`,
-`TransportProximity::is_strong`).
+`TransportProximity::is_strong`). The level assumes the tap was not
+relayed (security considerations below).
 
 ### State machine
 
@@ -623,7 +625,12 @@ Completed exchange ids are cached per session.
 
 - Physical contact is the authentication: the reader talks to the tag
   it touches. The signatures and the identity binding in `info` make
-  a relayed or substituted offer fail at the key rather than later.
+  a *substituted* offer fail at the key rather than later. A *relayed*
+  tap does not fail: two honest devices whose APDUs an attacker
+  forwards over a distance derive the same `K` with each other, and
+  each ends with a contact it did not mean to make, at trust level
+  `High` (C5). Nothing in the handshake measures distance or time of
+  flight; the level assumes the tap was not relayed.
 - Both offers are readable by an NFC sniffer at contact range:
   identity keys, fresh public keys and timestamps. The cards are
   encrypted.
