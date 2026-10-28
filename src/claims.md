@@ -68,8 +68,8 @@ Extracted on 2026-10-28 from the security-claims page of vauchi.app/docs, itself
 - **Attacker**: Someone in the relay path, or who learned a shared key.
 - **Statement**: Reciprocity tokens prove the peer completed the exchange; a leaked shared key is not enough to forge one, the identity key is also needed.
 - **If false**: A user is told an exchange completed when it did not.
-- **Status**: shipped
-- **Backed by**: Tamarin `reciprocity.spthy`, lemmas `confirmed_means_the_peer_confirmed` and `a_leaked_shared_key_also_needs_the_identity_key`
+- **Status**: partial
+- **Backed by**: Tamarin `reciprocity.spthy`, lemmas `confirmed_means_the_peer_confirmed` and `a_leaked_shared_key_also_needs_the_identity_key`, which model the relay-sync tier (In-Person Exchange D3). Partial: the identity signature exists on that tier only. The Glance tier (B13) authenticates the confirmation with the session key alone, so whoever holds that key forges it; the escrow tier (D2) compares a token derived from the exchange's raw DH output. On those two tiers the second sentence of the statement does not hold, and the confirmation is only as strong as the exchange's own secrecy (S6).
 - **Section**: [in-person-exchange](protocols/in-person-exchange.md)
 
 ## S8. Over Bluetooth, the scanner connects to the device it scanned
