@@ -266,9 +266,11 @@ the contact created in A10.
 
 ### Vectors
 
-None yet. The gate, slot and card-key derivations, and the v2
-payload with its signature, are listed in [Test Vectors](../vectors.md)
-as the next additions.
+`link_exchange` in [Test Vectors](../vectors.md) is one exchange end
+to end: the link of A1 from a fixed nonce and ephemeral key, the
+three slots of A2, the escrow gate, slots and card key of A4 under
+both roles, the signed v2 payload of A9 byte for byte, and the shared
+key of A10 from both sides.
 
 ---
 

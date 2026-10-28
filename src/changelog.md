@@ -7,6 +7,9 @@ Each spec tag maps to the Core commit it was extracted from.
 
 ## Unreleased
 
+- Vectors `qr_symmetric` (the mutual QR key, tokens and confirmation
+  escrow) and `link_exchange` (one link exchange end to end), from
+  Core's vector suite; the in-person and link chapters point at them.
 - The Attackers chapter and the conventions table of what holds each
   statement true (spec!5); the claim-name CI check with its pending
   list (spec!6); the image and deploy trigger for vauchi.app/spec

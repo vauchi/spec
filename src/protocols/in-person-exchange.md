@@ -250,10 +250,14 @@ and its ratchet.
 
 ### Vectors
 
-None yet. The symmetric derivation of A4 with its sorted `info`, the
-confirmation tokens of A5 and the v3 payload with its signature are
-the next additions to [Test Vectors](../vectors.md); the `x3dh` entry
-there is the two-DH agreement, not this one.
+`qr_symmetric` in [Test Vectors](../vectors.md): two identities and
+two ephemeral keys from fixed seeds, driven through the shipped
+session to the key agreement; the DH, the sorted `info` of A4, the
+shared key, both confirmation tokens of A5 and the confirmation
+escrow gate and slots. The QR bytes themselves are not in the vector,
+since the token and audio challenge are random and do not enter the
+key. The `x3dh` entry is the two-DH agreement of the relay-mediated
+exchange, not this one.
 
 ---
 
@@ -751,8 +755,9 @@ exchange converges.
 
 ### Vectors
 
-None yet. Candidates: a token pair from one secret and both identity
-keys, and a signed `0x03` payload.
+The token pair of D1 for the QR tier is in `qr_symmetric`
+([Test Vectors](../vectors.md)), with the escrow gate and slots of
+D2. A signed `0x03` payload of D3 is a candidate.
 
 ---
 
