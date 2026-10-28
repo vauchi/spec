@@ -14,6 +14,9 @@ src = "src"
 build-dir = "book"
 
 [output.html]
+# Served at vauchi.app/spec behind kamal-proxy's path prefix, like the
+# docs at vauchi.app/docs (vauchi/private#875).
+site-url = "/spec/"
 default-theme = "coal"
 preferred-dark-theme = "coal"
 git-repository-url = "https://gitlab.com/vauchi/spec"

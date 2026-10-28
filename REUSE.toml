@@ -18,6 +18,13 @@ path = ["src/vectors/**/*.json"]
 SPDX-FileCopyrightText = "2026 Mattia Egloff <mattia.egloff@pm.me>"
 SPDX-License-Identifier = "GPL-3.0-or-later"
 
+# Config files served or built verbatim; a header would be part of the
+# artefact.
+[[annotations]]
+path = ["Dockerfile", "nginx.conf"]
+SPDX-FileCopyrightText = "2026 Mattia Egloff <mattia.egloff@pm.me>"
+SPDX-License-Identifier = "GPL-3.0-or-later"
+
 # Dotfiles with no comment syntax of their own worth a header.
 [[annotations]]
 path = [".gitignore", ".markdownlint.json"]
