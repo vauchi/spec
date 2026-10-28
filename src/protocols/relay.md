@@ -3,43 +3,347 @@
 
 # Relay
 
-> **Status: not yet extracted.** This chapter is a placeholder with its sources listed. It makes no normative statement yet; the claims it will back are S3, S4.
+> **Status: extracted 2026-10-28** from `vauchi/relay` `9b869ac3b`,
+> `vauchi/ohttp-relay` `a4e7c6eed` and `vauchi/core` `612992b0b`. The
+> two hops between a client and its mail: the **application relay**
+> (the gateway, which stores blobs) and the **outer relay** (which
+> forwards encapsulated requests and sees the client's address). Claims
+> backed: [S3](../claims.md), [S4](../claims.md).
 
 ## Goal
 
-The keyless relay: mailbox tokens, Oblivious HTTP, what the relay stores, and exactly what it learns: timing, sizes and mailbox counts.
+A store-and-forward service that lets contacts who are never online
+at the same time exchange updates, and that learns as little as a
+service can: no plaintext, no identity, no address together with
+content. The application relay sees content-shaped bytes under
+rotating mailbox tokens; the outer relay sees addresses and opaque
+encapsulated bytes; neither sees both.
 
 ## Actors
 
-*To be extracted.*
+- **Client**: `vauchi-core` on a user's device.
+- **Outer relay** (`vauchi-ohttp-relay`): a pass-through proxy that
+  terminates the client's TLS connection and forwards OHTTP requests
+  to the gateway.
+- **Application relay** (`vauchi-relay`): the OHTTP gateway and the
+  blob store, with the escrow, exchange broker, recovery and guardian
+  stores the other chapters use.
+- **Operator(s)**: in the alpha one operator runs both hops on two
+  hosts (ADR-037 addendum 2026-09-08).
+- **Attacker**: a compromised hop, an observer of either hop's
+  network, or an anonymous client flooding mailboxes.
+
+---
 
 ## Message flow
 
-*To be extracted.*
+```text
+Client                      Outer relay                     Application relay (gateway)
+  | GET /v2/ohttp-key-signed  |--> forwards, caches 300 s     |  signed window key record
+  | verify anchor → intermediate → (window, KeyConfig)        |
+  | POST /v2/ohttp            |                               |
+  |   HPKE(KeyConfig, pad(inner JSON { version: 2, action, ...payload }))
+  |-------------------------->|--> POST /v2/ohttp (no client headers, no IP)
+  |                           |                               | decapsulate, unpad,
+  |                           |                               | dispatch action,
+  |                           |                               | pad reply to a ladder rung,
+  |                           |<-- message/ohttp-res ---------| encapsulate
+  |<--------------------------|                               |
+  | or: POST /v2/ohttp-async {ticket}; GET /v2/ohttp-async/:ticket later
+```
 
-## Normative operations
+Every action a client takes against the gateway (send, fetch, ack,
+register, purge, exchange, escrow, recovery, guardian, content) rides
+inside the encapsulated inner request; the gateway serves the same
+actions on plain `/v2/*` routes only for operators and tests, and a
+client in production refuses to use them (B6).
 
-*To be extracted from the sources below, each operation naming its function.*
+---
 
-## State machine
+## A. The application relay
 
-*To be extracted.*
+### Normative operations
+
+Source: `relay/src/http_api.rs`, `storage.rs`, `config.rs`,
+`rate_limit.rs`, `padding.rs`, `handler/verify.rs`,
+`vauchi-protocol/src/v2.rs`.
+
+**A1. Routes.** `POST /v2/send`, `/v2/fetch`, `/v2/ack`,
+`/v2/register`, `/v2/purge`, `/v2/exchange/{offer,claim,complete}`,
+`/v2/recovery/{store,query}`, `/v2/guardian/{store,query,delete}`,
+`POST /v2/ohttp`, `GET /v2/ohttp-key-signed`,
+`GET /v2/ohttp-anchor-rollover`, `GET /v2/health`. Every body is at
+most 128 KiB (`DefaultBodyLimit`); a malformed body is `400`. A
+request MAY carry `X-App-Compat-Version`; the relay answers
+`426 upgrade_required` below its minimum version and adds
+`X-Min-Version`, `X-Warn-Version` and `X-Upgrade-Deadline` headers
+during a grace period (`version_policy.rs`, 14 days by default).
+
+**A2. Send** (`handle_send_logic`). Body `{ recipient_id, ciphertext,
+origin_hint? }`. The relay MUST refuse when the per-mailbox rate
+limit for `recipient_id` is exhausted (`429`, `Retry-After`), when
+`recipient_id` is not 64 lower-case hex characters, when `ciphertext`
+is not base64, or when the mailbox would exceed its quota: by default
+1 000 blobs or 50 MB per recipient token (`429 quota exceeded`; zero
+means unlimited). It stores `(uuid, recipient_id, bytes, created_at,
+hop_count = 0, origin_hint)` and answers `{ status: "ok", blob_id }`.
+The relay does not check the ciphertext's shape; what it stores is
+whatever the client sent, and the sender's address is not part of the
+record. The rate limiter is a token bucket per key, 60 per minute by
+default, with a bounded number of tracked keys.
+
+**A3. Fetch** (`handle_fetch_logic`). Body `{ mailbox_tokens: [1 to
+100 tokens] }`. The relay returns, oldest first, every stored blob
+whose `recipient_id` is one of the tokens and whose age is below the
+TTL, as `{ blob_id, ciphertext, created_at, mailbox_token,
+origin_hint }`, until the page would exceed 96 KiB minus 512 bytes;
+then it sets `truncated: true` and the client re-fetches after
+acknowledging. Fetching does not remove anything (`peek_many`); an
+expired blob is never served even before the hourly sweep removes it
+(`fetch_enforces_retention_before_cleanup_over_http_and_ohttp`). The
+rate limit key is the first token. Nothing authenticates a fetch: the
+token is the capability.
+
+**A4. Ack** (`handle_ack_logic`). Body `{ recipient_id, blob_id }`.
+Deletes that one blob from that mailbox and answers whether it existed.
+A duplicate acknowledgement is harmless.
+
+**A5. Register** (`handle_register_logic`). Body `{ mailbox_tokens }`,
+at most 1 900 tokens of 64 hex characters each. Under the HTTP
+transport the relay validates and acknowledges and keeps nothing: the
+fetch carries its own token list (ADR-029 addendum 2026-05-22). The
+client still pads its list to a multiple of 256 and shuffles it.
+
+**A6. Retention.** A blob lives `blob_ttl_secs`, 120 days by default,
+from its `created_at`; the sweep runs hourly; a blob offloaded to a
+peer keeps its original age. Tests:
+`retention_keeps_day_100_data_across_restart_and_ack_removes_only_that_blob`,
+`retention_expires_at_the_exact_boundary_and_preserves_a_later_envelope`.
+
+**A7. Purge** (`handle_purge_logic`). Body `{ recipient_id,
+public_key, purge_token(32), signature, timestamp,
+erase_guardian_set }`. The relay MUST verify the Ed25519 signature by
+`public_key` over `recipient_id || purge_token || timestamp [||
+"erase-guardian-set"]`, refuse a timestamp more than 60 s from its
+clock and a replayed nonce, and only then delete every blob of the
+mailbox, its forwarding hints, the recovery proofs owned by that key
+and, when asked, the guardian set keyed by `SHA-256(public_key ||
+"guardians")`. This is the one route where an identity key reaches
+the relay, by design: deletion is the identity's own signed act
+(Keys and Cards, C3; the hard-shred lane
+`hard_shred_after_grace_fanout_over_outer_hop_only`).
+
+**A8. Response padding** (`padding.rs`). Every OHTTP reply is padded
+before encapsulation: a fetch to the smallest rung of 4 KiB, 32 KiB or
+96 KiB that holds it (`ohttp_fetch_size_ladder_tests.rs`), content
+files to 64 KiB, 512 KiB or 2 MiB (16 or 96 KiB compressed), every
+other action to the 256/512/1024/4096-byte buckets of the client's
+padding. The inner request is unpadded by the same rule and refused
+when its length is not a bucket.
+
+**A9. Jitter.** `delivery_jitter_min_ms`/`max_ms` (50 to 500 ms) are
+configured and tested in `jitter.rs`, but no request path calls
+`generate_jitter`: on the HTTP transport a blob is served as soon as
+it is stored.
+
+**A10. Federation** (`federation_core.rs`, `federation_http.rs`,
+ADR-052). Above 80 % of its storage a relay offloads its oldest
+unforwarded blobs to a peer over mutual TLS (`POST
+/v2/federation/message`, blob bytes raw, integrity `SHA-256` over
+the padded ciphertext), keeps a forwarding hint `routing_id → peer`
+and deletes the blob once the peer accepted; a peer refuses above
+95 % and refuses a blob that already hopped once. Federation is off
+by default; the peer registry is never filled on the shipped relay
+(vauchi/private#872) and Core has no client for forwarding hints
+(vauchi/private#835), so an offloaded blob is unreachable today.
+
+### What the relay records
+
+Prometheus counters and gauges (`metrics.rs`): blobs created,
+delivered, expired and stored, messages received, sent and rejected,
+rate-limited requests, request duration, connections, federation
+counters, recovery proofs active, the intermediate certificate's
+expiry. No token, address or payload appears in a metric or a log
+line; the RG-6 lane
+`integration_ohttp_relay_observations_exclude_update_content` reads
+the process output and `/metrics` for a routed update's payload and
+token and fails if either shows.
+
+---
+
+## B. Oblivious HTTP
+
+### Normative operations
+
+Source: `relay/src/ohttp_gateway.rs`, `ohttp_signer.rs`,
+`ohttp_window_keys.rs`, `ohttp_rollover.rs`;
+`vauchi-protocol/src/ohttp_key.rs`; `ohttp-relay/src/*`;
+`vauchi-core/src/network/ohttp_client.rs`,
+`crypto/ohttp_key_trust.rs`, `api/vauchi/sync_http.rs`,
+`network/http_transport/delayed.rs`.
+
+**B1. Encapsulation.** RFC 9458 with the `ohttp` crate: the client
+encapsulates `pad(JSON { version: 2, action, ...payload })` to the
+gateway's KeyConfig with a fresh client context per request and posts
+`message/ohttp-req` to the outer relay's `/v2/ohttp`; the gateway
+decapsulates, requires `version == 2`, dispatches the action, pads
+the JSON reply (A8) and encapsulates it as `message/ohttp-res`. Only
+the client can open the reply.
+
+**B2. Window keys.** The gateway serves one HPKE key per 24-hour UTC
+window, `window = floor(unix / 86 400)`, key id `window mod 256`,
+each window's key from its own random seed; it keeps the previous,
+current and next window across restarts (`VOW1` file). A stolen seed
+file opens at most three windows.
+
+**B3. Signed key record** (`/v2/ohttp-key-signed`,
+`SignedKeyConfig`). The record a client fetches is
+
+```text
+version 0x01 || window(8) || key_config_len(2) || key_config
+|| sig_intermediate(64) over (window, key_config)
+|| intermediate_pk(32) || not_before(8) || not_after(8)
+|| sig_anchor(64) over the intermediate certificate
+```
+
+An offline Ed25519 anchor certifies the intermediate for 90 days
+(renewed at 60, two overlapping certificates per ceremony); the
+gateway holds only the intermediate. The relay answers `503` rather
+than serve anything unsigned. An anchor replacement is published as a
+rollover chain (`/v2/ohttp-anchor-rollover`): each record names the
+new anchor and a commitment to the next backup and is signed by the
+backup the previous step committed to; at most 16 links.
+
+**B4. Client trust** (`accept_signed_key`). A client MUST accept a
+record only when the anchor it holds (compiled in as
+`PROD_OHTTP_ANCHOR`, or the one configured with the relay URL)
+verifies the intermediate for `now`, the intermediate verifies
+`(window, key_config)`, the window is within one of the current
+window, the key id matches the window, and the record is not older
+than a key it already holds for that relay nor a different key for a
+window it holds (`Equivocation`). A record whose intermediate fails
+under the held anchor is retried under the rollover chain, each link
+checked against the previous anchor's commitment. There is no
+unverified fallback; the lane `hostile_bootstrap_responses_fail_closed`
+feeds poisoned key responses and expects zero direct requests.
+
+**B5. The outer relay** (`vauchi-ohttp-relay`). A stateless proxy
+that forwards `POST /v2/ohttp` bodies of at most 128 KiB to the
+gateway, refuses gateway replies over 128 KiB, propagates no client
+header upstream, logs no client address, and caches the signed key
+record for 300 s. It rate-limits per client IP in memory (50 requests
+per second per IP by default) and evicts stale buckets; the IP is a
+HashMap key and nothing else. **Delayed path** (`/v2/ohttp-async`,
+vauchi/private#628): the client posts under a ticket it chose, the
+outer relay forwards after a random delay of up to 900 s and holds the
+encapsulated answer in memory until the client collects it on a later
+poll, so the gateway sees the fetch long after the client's
+connection. Losing the held answer costs a re-post, never mail: a
+fetch only peeks.
+
+**B6. No plaintext path.** A client MUST NOT send a data request to
+the application relay directly: `post_action` fails unless an outer
+relay distinct from the application relay's origin is configured or
+`allow_direct` is set, which production never sets
+(`distinct_ohttp_route`, ADR-037 addendum 2026-07-04). The key record
+is fetched through the same outer hop. TLS to the outer relay MAY be
+pinned by SPKI hash in addition to WebPKI (`tls_pinning.rs`).
+
+### State machine
+
+Gateway key: `next` is generated a window ahead; at the window
+boundary `current` becomes `previous` and stays accepted for one
+window. Intermediate: valid 90 days, standby issued at day 60; the
+relay refuses to start when it cannot sign today's window under the
+expected anchor (`ohttp_install.rs`). Client held key: `None` →
+accepted record → replaced only by a newer window or kept across a
+failed refetch while the gateway still holds its window.
+
+---
 
 ## Failure cases
 
-*To be extracted.*
+- Rate limit or quota: `429` with `Retry-After`; the client retries
+  later and its update stays pending.
+- Unknown or malformed token, bad base64, unknown action, wrong inner
+  version: `400`.
+- Purge with a bad signature or stale timestamp: `401`; nothing is
+  deleted (`a_purge_with_a_bad_signature_keeps_the_hints`).
+- Gateway without a signed record: `503`; the client keeps its held
+  key while the gateway still serves that window, else it fails
+  closed.
+- Outer relay down or the delayed answer lost: the request is
+  re-posted; no mail is lost.
+- Client below the minimum protocol version: `426`.
 
 ## Security considerations
 
-Claims backed by this chapter: [S3](../claims.md), [S4](../claims.md)
+- **The relay does not learn the user's network address**, claim
+  [S3](../claims.md), partial. The gateway sees requests from the
+  outer relay only (`application_relay_observes_the_ohttp_relay_never_the_end_user`,
+  lane RG-7), the outer relay sees addresses and HPKE ciphertext, the
+  device-link chain makes no direct request to either hop
+  (`device_link_chain_makes_zero_requests_to_either_hop`). Partial
+  because one operator runs both hops in the alpha: the property
+  holds against a single-host compromise and against third parties,
+  not against the operator, and RG-7 closes on host separation until
+  stage `release` (ADR-037 addendum 2026-09-08). The delayed path (B5)
+  is what breaks the timing link a single observer of both hops could
+  otherwise draw.
+- **Public keys never route traffic**, claim [S4](../claims.md),
+  partial. Mailboxes are 64-hex tokens derived per day from a shared
+  key and the recipient's identity key (Card Update and Sync, B8);
+  the relay stores no key, and a token from one day does not name the
+  mailbox of the next. Partial: cross-day unlinkability is a design
+  argument backed by `mailbox_token.spthy` in Core's round 8 and by
+  the token tests, not by an experiment against the relay's logs; and
+  a mailbox *is* linkable within a day across its fetches, which is
+  what the per-mailbox rate limit and quota rely on.
+- **What the application relay learns.** Per blob: a token, a size
+  (a padding bucket after the client's padding, a ladder rung on the
+  way out), a time of arrival and of acknowledgement, an origin-hint
+  blob when present, and the ratchet header inside the JSON it cannot
+  read further. Per fetch: a set of up to 100 tokens that one client
+  asked for together, which groups a user's contacts for that day.
+  Per purge: an identity key, by the owner's choice.
+- **What the outer relay learns.** The client's address, the times
+  and sizes of its encapsulated requests, and which tickets it
+  collects. It cannot open requests or answers.
+- **What anyone can do.** Send to any token, which is why mailboxes
+  have quotas and per-token rate limits
+  (`a_flooded_mailbox_is_limited_while_another_is_still_served`);
+  fetch any token, which yields ciphertext only and removes nothing;
+  acknowledge a blob by guessing a UUID, which is the one write an
+  outsider could attempt and is bounded by the rate limit.
+- **Key trust.** A compromised outer relay cannot substitute a gateway
+  key: the client accepts only the anchor's chain, refuses an older
+  window and refuses a second key for a held window. A compromised
+  anchor is the trust root's limit; the rollover chain is how the
+  owner moves away from it.
 
 ## Vectors
 
-*To be listed from [Test Vectors](../vectors.md).*
+`mailbox_tokens` in [Test Vectors](../vectors.md) covers the tokens
+the relay routes on. The signed key record, its two signing messages
+and a rollover record are candidates; none exists yet.
 
 ## Sources
 
-- `vauchi-core/src/network/mailbox_token.rs` (`Vauchi_Mailbox_v1`, `Vauchi_MailboxDevice_v1`, `Vauchi_DeviceSyncRecipient_v1`, day epoch)
-- `vauchi-core/src/network/http_transport/` (OHTTP, RFC 9458)
-- `vauchi/relay` `src/http_api.rs` (128 KB body limit), `guardian_storage.rs`
-- `vauchi-core/verification/mailbox_token.spthy` (Core round 8, diff-equivalence across days)
+- `relay/src/http_api.rs`, `storage.rs`, `config.rs`, `rate_limit.rs`,
+  `padding.rs`, `jitter.rs`, `version_policy.rs`, `handler/verify.rs`,
+  `handler/nonce.rs`, `maintenance.rs`, `metrics.rs`
+- `relay/src/ohttp_gateway.rs`, `ohttp_signer.rs`,
+  `ohttp_window_keys.rs`, `ohttp_rollover.rs`, `ohttp_install.rs`
+- `relay/src/federation_core.rs`, `federation_http.rs`,
+  `federation_connector.rs`, `forwarding_hints.rs`, `integrity.rs`
+- `vauchi-protocol/src/v2.rs`, `ohttp_key.rs`
+- `ohttp-relay/src/lib.rs`, `config.rs`, `router.rs`, `delayed.rs`,
+  `rate_limit.rs`, `signed_key_cache.rs`, `upstream.rs`
+- `vauchi-core/src/network/ohttp_client.rs`, `http_transport.rs`,
+  `http_transport/delayed.rs`, `http_adapter.rs`, `tls_pinning.rs`,
+  `crypto/ohttp_key_trust.rs`, `api/vauchi/sync_http.rs`,
+  `api/config.rs`
+- `e2e/tests/it/ohttp_source_address.rs`, `ohttp_integration.rs`,
+  `ohttp_fail_closed_matrix.rs`, `action_family_oracles.rs`
+- ADR-029 (tokens), ADR-037 and addenda (OHTTP, single operator,
+  trust root), ADR-052 (federation)
