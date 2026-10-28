@@ -31,7 +31,9 @@ usage() {
 }
 
 candidates() {
-    grep -oE '`[a-z][a-z0-9_]*`' "$1" | tr -d '`' | awk 'length($0) > 8' | sort -u
+    # Commit hashes in backticks are all hex; they are references, not names.
+    grep -oE '`[a-z][a-z0-9_]*`' "$1" | tr -d '`' | awk 'length($0) > 8' |
+        grep -vE '^[0-9a-f]+$' | sort -u
 }
 
 pending_names() {
@@ -83,7 +85,7 @@ self_test() {
     mkdir -p "$tmp/root/tests"
     printf 'fn a_real_test_name() {}\nlemma a_real_lemma_name:\n' > "$tmp/root/tests/x.rs"
     printf -- '- **Backed by**: `a_real_test_name`, `a_real_lemma_name`, `a_real_test_name_prefix`\n' > "$tmp/bad.md"
-    printf -- '- **Backed by**: `a_real_test_name` and `a_real_lemma_name`; file `foo_tests.rs`; lane `test:release-rg7`; flag `-DNO_SIGNATURE`\n' > "$tmp/good.md"
+    printf -- '- **Backed by**: `a_real_test_name` and `a_real_lemma_name`; file `foo_tests.rs`; lane `test:release-rg7`; flag `-DNO_SIGNATURE`; commit `a4e7c6eed`\n' > "$tmp/good.md"
     : > "$tmp/empty.pending"
 
     if CLAIM_NAMES_PENDING="$tmp/empty.pending" check "$tmp/bad.md" "$tmp/root" 2>"$tmp/err"; then
