@@ -92,11 +92,11 @@ Extracted on 2026-10-28 from the security-claims page of vauchi.app/docs, itself
 
 ## S10. Trust level follows how you exchanged, and cannot be edited
 
-- **Attacker**: A user, or software on the device, trying to raise a contact's trust.
+- **Attacker**: A user, through the app, trying to raise a contact's trust.
 - **Statement**: The trust shown for a contact is derived from the exchange facts: transport, proximity evidence, and whether the user compared key fingerprints out of band; there is no control to set a level by hand.
 - **If false**: A contact is shown as verified without the evidence.
 - **Status**: shipped
-- **Backed by**: test `the_trust_shown_follows_the_exchange_and_cannot_be_tapped` in `contact_trust_tests.rs` (vauchi-app)
+- **Backed by**: test `the_trust_shown_follows_the_exchange_and_cannot_be_tapped` in `contact_trust_tests.rs` (vauchi-app). The test proves the absence of a control; software that can write the database can change the stored exchange facts the derivation reads (Keys and Cards G3), and nothing here claims otherwise.
 - **Section**: [keys-and-cards](protocols/keys-and-cards.md)
 
 ## S11. Old messages stay secret after a compromise
