@@ -239,7 +239,16 @@ outer relay forwards after a random delay of up to 900 s and holds the
 encapsulated answer in memory until the client collects it on a later
 poll, so the gateway sees the fetch long after the client's
 connection. Losing the held answer costs a re-post, never mail: a
-fetch only peeks.
+fetch only peeks. The outer relay advertises its window in a
+`vauchi-ohttp-delay-window` header on every synchronous answer
+(`advertised_delay_window`); a client that has seen it sends fetches
+and acknowledgements through the delayed path and stays there until
+the header is withdrawn (`delayed_window`, `fetch_path` in
+`api/vauchi/sync_delayed.rs`). `RelayConfig::ohttp_delayed` only
+forces the path where no advertisement exists, and a forced client
+never falls back. The production outer relay advertises 900 s
+(observed 2026-10-28), so shipped clients fetch through the delayed
+path today.
 
 **B6. No plaintext path.** A client MUST NOT send a data request to
 the application relay directly: `post_action` fails unless an outer
