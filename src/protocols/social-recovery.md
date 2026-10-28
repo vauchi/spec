@@ -223,8 +223,7 @@ the shared secret, and sets the flag that makes the trust level
 The claim, voucher, proof, upload and verdict are Core API with tests;
 no shipped screen fetches proofs from the relay or calls
 `verify_recovery_proof`, and no API path calls `accept_recovery`
-(record `2026-10-24-recovery-acceptance-never-rekeys`, "recovery stops
-at a confidence verdict"). The app's claim-review engine renders the
+(vauchi/private#796: "recovery stops at a confidence verdict"). The app's claim-review engine renders the
 vouching and acceptance screens from a verdict handed to it.
 
 ### Security considerations
@@ -317,6 +316,5 @@ with their signing messages.
   `handler/verify.rs`, `http_api.rs`
 - `vauchi-core/verification/social_recovery.spthy`,
   `recovery_acceptance.spthy`
-- Record `2026-10-24-recovery-acceptance-never-rekeys` and its plan
-  (vauchi/private#796); ADR-002 amendment (identity-key reuse for the
-  sealed box)
+- vauchi/private#796 and its plan; ADR-002 amendment (identity-key
+  reuse for the sealed box)

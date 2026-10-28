@@ -14,7 +14,7 @@ SPDX-License-Identifier = "GPL-3.0-or-later"
 # Test vectors are data produced by vauchi-core's test suite; JSON carries
 # no comment syntax for a header.
 [[annotations]]
-path = ["src/vectors/**/*.json", "src/.well-known/**"]
+path = ["src/vectors/**/*.json"]
 SPDX-FileCopyrightText = "2026 Mattia Egloff <mattia.egloff@pm.me>"
 SPDX-License-Identifier = "GPL-3.0-or-later"
 

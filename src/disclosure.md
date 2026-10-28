@@ -5,14 +5,16 @@
 
 > **Draft for the maintainer's approval.** The scope and the safe-harbour
 > wording below are proposed text; until the maintainer approves them
-> here and publishes `security.txt`, the binding instruction is: write to
-> security@vauchi.app.
+> here, the binding instruction is: write to security@vauchi.app.
 
 ## Contact
 
 - Email: **security@vauchi.app**
-- `security.txt`: to be published at `https://vauchi.app/.well-known/security.txt`
-  (proposed content in this repository at `src/.well-known/security.txt`).
+- `security.txt`: published at
+  <https://vauchi.app/.well-known/security.txt>. Its Policy field points
+  at the short form in the workspace's `SECURITY.md` until this book is
+  served at spec.vauchi.app; this page is the canonical text and the
+  short form defers to it.
 
 ## Scope
 
@@ -30,8 +32,8 @@ users.
 ## What to send
 
 What you found, how to reproduce it, which claim (S-number) it breaks
-if it maps to one, and whether you want to be named. Encrypted mail is
-welcome; the key is published with `security.txt`.
+if it maps to one, and whether you want to be named. There is no PGP
+key; mail is plain.
 
 ## What to expect
 
