@@ -121,9 +121,9 @@ Extracted on 2026-10-28 from the security-claims page of vauchi.app/docs, itself
 
 - **Attacker**: Someone holding the backup file.
 - **Statement**: Backups are encrypted with a key derived from the password; the file never contains key material in the clear, and a wrong password fails rather than yielding garbage.
-- **If false**: A backup in cloud storage exposes the identity.
+- **If false**: A backup in cloud storage exposes the identity and, for the full backup that is the default today, every contact's shared key, card and visibility rules.
 - **Status**: shipped
-- **Backed by**: tests `v2_backup_encrypts_the_seed_and_leaks_no_key_material`, `test_v2_wrong_password` and `backup_debug_output_carries_no_secrets_or_contact_data` in `backup_format_versioning_tests.rs` and `backup_boundary_tests.rs`; for the v6 file the app writes today, `backup_v6_vector_decrypts_under_its_header_and_not_under_a_changed_one` and `backup_v6_vector_imports_with_production_argon2id_and_refuses_a_wrong_password` in `protocol_test_vectors_tests.rs`; vectors entries `backup` (v3) and `backup_v6`
+- **Backed by**: tests `v2_backup_encrypts_the_seed_and_leaks_no_key_material`, `test_v2_wrong_password` and `backup_debug_output_carries_no_secrets_or_contact_data` in `backup_format_versioning_tests.rs` and `backup_boundary_tests.rs`; for the v6 file the app writes today, `backup_v6_vector_decrypts_under_its_header_and_not_under_a_changed_one` and `backup_v6_vector_imports_with_production_argon2id_and_refuses_a_wrong_password` in `protocol_test_vectors_tests.rs`; vectors entries `backup` (v3) and `backup_v6`. The claim is about the file; its strength against guessing is the password through Argon2id, and only the identity-only v2 export checks the password's strength today: the full backup accepts any password (Keys and Cards D5, vauchi/private#891).
 - **Section**: [keys-and-cards](protocols/keys-and-cards.md)
 
 ## S14. A duress unlock shows a decoy and sends nothing that reveals it

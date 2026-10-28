@@ -291,10 +291,12 @@ decrypting (`guardian_backup_key_matches`, constant time).
 
 **D5. What the app offers.** The backup wizard's default level is
 *Full*; *Identity only* (v2) is the opt-in
-(`vauchi-app/src/ui/backup_recovery.rs`, "Option D"). ADR-058 as
-summarised in the project's constraints says the opposite, that the
-full backup is opt-in; the code and the ADR text disagree and this
-chapter reports the code.
+(`vauchi-app/src/ui/backup_recovery.rs`; ADR-058 amendment 2026-10-28,
+Option D). Only the v2 export runs the password strength check of D1:
+`export_full_backup` passes the password to the encoder unchecked,
+and the wizard adds no check of its own, so the file that holds every
+contact's shared key accepts any password today
+(vauchi/private#891).
 
 ### Failure cases
 
@@ -321,8 +323,10 @@ chapter reports the code.
   production Argon2id parameters
   (`backup_v6_vector_imports_with_production_argon2id_and_refuses_a_wrong_password`).
 - A full backup contains every contact's shared key and card. Its
-  strength is the password through Argon2id (B3); the app enforces the
-  strength check for v2 and the same KDF for the rest.
+  strength against guessing is the password through Argon2id (B3),
+  and the strength check runs for v2 only (D5): until
+  vauchi/private#891 lands, the default backup is as strong as
+  whatever password the person typed.
 - The backup is the seed: see A's note on clones.
 
 ### Vectors
