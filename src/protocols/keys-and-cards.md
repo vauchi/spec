@@ -313,9 +313,13 @@ chapter reports the code.
   `v2_backup_encrypts_the_seed_and_leaks_no_key_material`,
   `test_v2_wrong_password`,
   `backup_debug_output_carries_no_secrets_or_contact_data`, vectors
-  entry `backup`. The v6 header is authenticated, so a changed salt or
-  version fails the tag
-  (`full_backup_validation_authenticates_header_and_ciphertext`).
+  entries `backup` (v3) and `backup_v6`. The v6 header is
+  authenticated, so a changed salt or version fails the tag
+  (`full_backup_validation_authenticates_header_and_ciphertext`,
+  `backup_v6_vector_decrypts_under_its_header_and_not_under_a_changed_one`),
+  and the v6 vector is imported through `import_full_backup` with the
+  production Argon2id parameters
+  (`backup_v6_vector_imports_with_production_argon2id_and_refuses_a_wrong_password`).
 - A full backup contains every contact's shared key and card. Its
   strength is the password through Argon2id (B3); the app enforces the
   strength check for v2 and the same KDF for the rest.
@@ -323,9 +327,10 @@ chapter reports the code.
 
 ### Vectors
 
-`identity` (A2, A3 for index 0) and `backup` (D2's key derivation and
-a complete v3 file) in [Test Vectors](../vectors.md). The v6 and v5
-derivations are not in the vectors yet.
+`identity` (A2, A3 for index 0), `backup` (D2's key derivation and a
+complete v3 file) and `backup_v6` (D3's header, base key, final key
+and a complete file) in [Test Vectors](../vectors.md). The v5
+derivation is not in the vectors yet.
 
 ---
 

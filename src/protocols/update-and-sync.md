@@ -261,12 +261,12 @@ checkpoint advances only after an exhaustive pass.
 **C4. Blocking and receipts.** A blocked contact receives no further
 updates and its updates fail at step 1; the block is local and synced
 only to the owner's own devices, never signalled to the blocked
-contact (ADR-056). The setting `delivery_receipts_enabled` defaults to
-`true` in `settings.rs` and `api/config.rs`, but no code path reads
-it beyond configuration: the client sends no delivery or read receipt
-of any kind. ADR-057's rule, receipts opt-in and off by default, holds
-because there are none; the default value of the unused flag says the
-opposite and should follow the ADR.
+contact (ADR-056). The client sends no delivery or read receipt of any
+kind: there is no code path that would emit one, and the settings
+toggle that once claimed to control delivery receipts was removed
+because nothing read it (core!2056, ADR-057 addendum 2026-10-28). A
+stored settings file that still carries the old flag loads and the
+flag is ignored.
 
 **C5. Genesis envelope** (`exchange/genesis.rs`, ADR-068). A device
 that holds a contact's shared key but no session (a linked device

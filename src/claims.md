@@ -7,7 +7,7 @@ These are the claims a reviewer is invited to falsify. Each one names its attack
 
 Proof pointers name test functions and lanes in [vauchi/core](https://gitlab.com/vauchi/core) and [vauchi/e2e](https://gitlab.com/vauchi/e2e), and lemmas in Core's `vauchi-core/verification/` and `vauchi-app/verification/`. Lemma names that end in a behaviour, such as `qr_leak_exposes_seed`, are exists-trace lemmas: they prove that the attack exists in the model, and are published on purpose.
 
-Extracted on 2026-10-28 from the security-claims page of vauchi.app/docs, itself verified against Core `main` that week; the normative sections are the chapters this book is still extracting, so the *Section* links lead to placeholders until then.
+Extracted on 2026-10-28 from the security-claims page of vauchi.app/docs, itself verified against Core `main` that week. Every *Section* link leads to an extracted chapter; where a chapter found the code weaker than the claim's sentence, its security considerations say so and the claim's entry is the one to read next.
 
 ## S1. The relay cannot read a contact card or an update
 
@@ -123,7 +123,7 @@ Extracted on 2026-10-28 from the security-claims page of vauchi.app/docs, itself
 - **Statement**: Backups are encrypted with a key derived from the password; the file never contains key material in the clear, and a wrong password fails rather than yielding garbage.
 - **If false**: A backup in cloud storage exposes the identity.
 - **Status**: shipped
-- **Backed by**: tests `v2_backup_encrypts_the_seed_and_leaks_no_key_material`, `test_v2_wrong_password` and `backup_debug_output_carries_no_secrets_or_contact_data` in `backup_format_versioning_tests.rs` and `backup_boundary_tests.rs`; vectors entry `backup`
+- **Backed by**: tests `v2_backup_encrypts_the_seed_and_leaks_no_key_material`, `test_v2_wrong_password` and `backup_debug_output_carries_no_secrets_or_contact_data` in `backup_format_versioning_tests.rs` and `backup_boundary_tests.rs`; for the v6 file the app writes today, `backup_v6_vector_decrypts_under_its_header_and_not_under_a_changed_one` and `backup_v6_vector_imports_with_production_argon2id_and_refuses_a_wrong_password` in `protocol_test_vectors_tests.rs`; vectors entries `backup` (v3) and `backup_v6`
 - **Section**: [keys-and-cards](protocols/keys-and-cards.md)
 
 ## S14. A duress unlock shows a decoy and sends nothing that reveals it

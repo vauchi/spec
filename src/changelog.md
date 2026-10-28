@@ -7,6 +7,11 @@ Each spec tag maps to the Core commit it was extracted from.
 
 ## Unreleased (towards 0.1-draft)
 
+- Vectors: `backup_v6` added from Core `main` after core!2054, the
+  file the app writes today, with its two Core tests named under S13.
+  The sync chapter no longer describes the removed delivery-receipts
+  flag (core!2056).
+
 - Chapters "In-Person Exchange", "Keys and Cards", "Card Update and
   Sync", "Relay" and "Social Recovery" extracted 2026-10-28 from Core
   `612992b0b`, relay `9b869ac3b` and ohttp-relay `a4e7c6eed`. Every
