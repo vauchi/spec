@@ -310,19 +310,19 @@ failed refetch while the gateway still holds its window.
   what the per-mailbox rate limit and quota rely on; and the
   **fetcher** is linkable across days. Each cycle the client fetches
   today's and yesterday's token of every contact in one request set
-  (Card Update and Sync C1, `registration_tokens` in
-  `mailbox_token.rs`), so the sets of two consecutive days intersect
-  in exactly yesterday's real tokens. The relay can chain one
-  anonymous fetcher for as long as it keeps fetching, count its
-  contacts, see which of its mailboxes received blobs on which day,
-  and tell the recurring real tokens from the random padding. The
-  delayed path spreads the timing of the requests, not their
-  contents. core!2060 (vauchi/private#890, in review) builds one
-  padded batch set per day epoch and fetches each batch on its own, so
-  no request spans two days; the relay is then left with the timing
-  of a day's requests, which the delayed path spreads, and the
-  per-day overlap of the catch-up requests with the days they
-  revisit, which is inherent to fetching an old token at all. Three
+  (Card Update and Sync C1), so the sets of two consecutive days
+  intersected in exactly yesterday's real tokens. The relay could
+  chain one anonymous fetcher for as long as it kept fetching, count
+  its contacts, see which of its mailboxes received blobs on which
+  day, and tell the recurring real tokens from the random padding.
+  Since core!2060 (vauchi/private#890, merged 2026-10-28)
+  `registration_tokens_by_day` in `mailbox_token.rs` builds one
+  padded batch set per day epoch and the adapter fetches each batch
+  on its own (`fetch_chunks`), so no request spans two days; the
+  relay is left with the timing of a day's requests, which the
+  delayed path spreads, and the per-day overlap of the catch-up
+  requests with the days they revisit, which is inherent to fetching
+  an old token at all. Three
   routes are addressed
   by an identity key or its hash on purpose: guardian sets under
   `SHA-256(owner_pk || "guardians")`, recovery proofs under

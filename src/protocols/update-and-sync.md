@@ -224,9 +224,13 @@ each sync the client registers, for every contact, the tokens of the
 days it still owes: from its last exhaustive checkpoint minus one day
 (rotation skew) up to today, never more than 120 days back
 (`RETAINED_DAYS`), at most 14 owed days per cycle plus yesterday and
-today. The token list MUST be padded to a multiple of 256 with random
-tokens and shuffled (`batch_register_tokens`), so the relay does not
-learn the number of contacts or which tokens recur.
+today. The tokens of each day epoch form their own list, and each
+list MUST be padded to a multiple of 256 with random tokens and
+shuffled (`registration_batches` in `receive_context.rs`,
+`batch_register_tokens_with_device_sync`), so the relay does not learn
+the number of contacts or which tokens recur; a fetch request never
+spans two lists (`fetch_chunks` in `http_adapter.rs`, core!2060), so
+consecutive days' requests share no token.
 
 **C2. Fetching.** `POST /v2/fetch` returns blobs for the registered
 tokens, paged; the client acknowledges each blob it has processed, by

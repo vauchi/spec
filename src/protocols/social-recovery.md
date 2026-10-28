@@ -152,7 +152,7 @@ steps 1 to 3). The guardian **tokens** of A4 do reach the relay today.
   claim [S17](../claims.md): `backup_needs_both_guardians` (also under
   `-DGROUP_OF_TWO` and `-DTHREE_GROUPS`, falsified under
   `-DONE_GUARDIAN`), `a_group_mate_can_stand_in`,
-  `john_rekeys_only_with_the_real_john` and
+  `john_rekeys_only_with_the_real_alice` and
   `alice_rekeys_only_with_the_real_john` in `social_recovery.spthy`.
   The model's rekey half describes the design of section C, not the
   code.
