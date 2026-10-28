@@ -311,7 +311,12 @@ failed refetch while the gateway still holds its window.
   contents. Tracked as vauchi/private#890. Three routes are addressed
   by an identity key or its hash on purpose: guardian sets under
   `SHA-256(owner_pk || "guardians")`, recovery proofs under
-  `SHA-256(old_pk)` and purge with the key itself (A7).
+  `SHA-256(old_pk)` and purge with the key itself (A7). And the
+  rotation is not forward secure: tokens are deterministic in the
+  shared key, the recipient's key and the day (Card Update and Sync
+  B8), so a later compromise of a channel's shared key recomputes
+  every past token of that channel; against a log the relay kept,
+  unlinkability lasts only as long as the key's secrecy.
 - **What the application relay learns.** Per blob: a token, a size
   (a padding bucket after the client's padding, a ladder rung on the
   way out), a time of arrival and of acknowledgement, an origin-hint
