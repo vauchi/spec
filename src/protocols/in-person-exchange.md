@@ -163,8 +163,13 @@ the tap or the cable is the proof.
 `AwaitingCardExchange`. The contact is created with the peer's identity
 key, the card the shell supplies, `K` as the shared key, the proximity
 confidence, the transport and trust metrics `(transport, confidence,
-timestamp)`; the relay URL from the peer's QR becomes the contact's
-routing address. A QR carries no card, so the CLI supplies a card
+timestamp)`; the relay URL from the peer's QR is stored as the
+contact's relay URL and copied onto each pending update as
+`target_relay_url`, but no shipped path dispatches by it: every send
+goes to the configured relay through the outer hop (Card Update and
+Sync B8), and the grouping by relay URL the sync manager offers has
+only a test as its caller. A peer cannot choose where our updates to
+it travel. A QR carries no card, so the CLI supplies a card
 holding only the QR's display name (`"New Contact"` when empty); the
 full card arrives with the first synced update. A session MUST fail
 with `SessionTimeout` on any event other than `Fail` more than 60 s

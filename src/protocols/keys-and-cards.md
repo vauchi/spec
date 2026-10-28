@@ -479,7 +479,12 @@ input against both salts every time and compare both in constant time;
 the password wins when both match. After a platform biometric, Core
 answers in no less than a fixed minimum time whether a PIN prompt is
 needed, so the presence of a duress PIN does not show in the unlock
-animation.
+animation. It does show to someone who images the storage: a
+six-digit PIN under Argon2id is about a million guesses offline, so
+the hash reveals whether a duress PIN exists and what it is. The
+duress PIN defends against a coercer who watches the unlock, not one
+who extracts the database, and the second already holds the data
+(the limit F3's model states).
 
 **F2. What a duress unlock shows.** `auth_mode` becomes `Duress`.
 Contact listing and lookup answer only decoy contacts, built from the
