@@ -167,6 +167,11 @@ Extracted on 2026-10-28 from the security-claims page of vauchi.app/docs, itself
 Limits known today, so that a reviewer does not spend a week proving them:
 
 - The relay sees metadata: which mailbox tokens receive how much, and when. Sealed sender and padding reduce it; they do not remove it.
+- The relay can follow one fetcher across days: consecutive days' fetch sets overlap in yesterday's real tokens, which also tells the padding from the real entries (S4, vauchi/private#890).
+- Three relay routes are addressed by an identity key or its hash: guardian sets, recovery proofs and purge. A recovery is visible metadata to the relay by design.
+- Device-to-device sync has no forward secrecy: a later compromise of a device's exchange key opens every recorded batch, and batches carry contacts, cards and ratchet states (S11).
+- The full backup, the default, accepts any password; only the identity-only export checks strength (S13, vauchi/private#891).
+- A duress PIN is six digits. Its Argon2id hash in storage is brute-forceable offline in about a million guesses, so someone who images the device learns whether a duress PIN exists and what it is; duress protects against a coercer who watches, not one who extracts the storage, and the latter already holds the data (Keys and Cards F).
 - A compromised device exposes the whole identity seed. Subkeys are planned.
 - There is no key transparency log. A relay that hands out a wrong key for a first contact is not auditable today; a signed log is planned.
 - The key agreement is not post-quantum. Recorded ciphertext could be read by a future quantum computer; a hybrid ML-KEM scheme is planned.
