@@ -24,7 +24,7 @@ Extracted on 2026-10-28 from the security-claims page of vauchi.app/docs, itself
 - **Statement**: A relay that replays an old update, swaps the sender or serves a stale version cannot change what the recipient ends up with.
 - **If false**: A relay rewrites a contact's card, or reverts a revoked field.
 - **Status**: shipped
-- **Backed by**: Tamarin `card_update.spthy`, lemmas `update_comes_from_the_sender_for_this_recipient`, `each_update_is_applied_once`, `no_rollback`; tests `test_crypto_hardening_ratchet_same_chain_auth_failure_rolls_back_state` and `test_crypto_hardening_ratchet_new_dh_auth_failure_rolls_back_state` in `crypto_ratchet_tests.rs`
+- **Backed by**: Tamarin `card_update.spthy`, lemmas `update_comes_from_the_sender_for_this_recipient` and `each_update_is_applied_once`; tests `test_crypto_hardening_ratchet_same_chain_auth_failure_rolls_back_state` and `test_crypto_hardening_ratchet_new_dh_auth_failure_rolls_back_state` in `crypto_ratchet_tests.rs`. The third sentence, no rollback, rests on the version floor in code: `stale_version_delta_rejected_by_device_receiver` in `sync_card_update_tests.rs`, `delta_version_floor_is_tracked_per_peer_device` in `sync_card_update_device_floor_tests.rs` and `genesis_card_per_device_floor_accepts_each_device_and_rejects_its_own_stale_version`. The model's `no_rollback` lemma is falsified without the floor and reaches no verdict with it (Card Update and Sync, security considerations), so it is stated, not proved.
 - **Section**: [update-and-sync](protocols/update-and-sync.md)
 
 ## S3. The relay does not learn the user's network address
