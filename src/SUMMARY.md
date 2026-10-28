@@ -6,6 +6,7 @@
 [Introduction](./index.md)
 
 - [Conventions](./conventions.md)
+- [Attackers](./attackers.md)
 - [Security Claims](./claims.md)
 
 # Protocols
