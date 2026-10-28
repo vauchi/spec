@@ -1,0 +1,25 @@
+# SPDX-FileCopyrightText: 2026 Mattia Egloff <mattia.egloff@pm.me>
+# SPDX-License-Identifier: GPL-3.0-or-later
+
+# mdbook 0.5.x has breaking changes; pinned to 0.4.x like vauchi/docs.
+
+[book]
+title = "Vauchi Protocol Specification"
+description = "The Vauchi protocols as shipped: normative, versioned, with numbered claims and test vectors"
+authors = ["Mattia Egloff"]
+language = "en"
+src = "src"
+
+[build]
+build-dir = "book"
+
+[output.html]
+default-theme = "coal"
+preferred-dark-theme = "coal"
+git-repository-url = "https://gitlab.com/vauchi/spec"
+edit-url-template = "https://gitlab.com/vauchi/spec/-/edit/main/src/{path}"
+no-section-label = false
+
+[output.html.search]
+enable = true
+limit-results = 20

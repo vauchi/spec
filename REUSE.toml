@@ -1,0 +1,25 @@
+# SPDX-FileCopyrightText: 2026 Mattia Egloff <mattia.egloff@pm.me>
+#
+# SPDX-License-Identifier: GPL-3.0-or-later
+
+version = 1
+SPDX-PackageName = "vauchi-spec"
+SPDX-PackageSupplier = "Mattia Egloff <mattia.egloff@pm.me>"
+
+[[annotations]]
+path = ["LICENSES/**"]
+SPDX-FileCopyrightText = "Free Software Foundation"
+SPDX-License-Identifier = "GPL-3.0-or-later"
+
+# Test vectors are data produced by vauchi-core's test suite; JSON carries
+# no comment syntax for a header.
+[[annotations]]
+path = ["src/vectors/**/*.json", "src/.well-known/**"]
+SPDX-FileCopyrightText = "2026 Mattia Egloff <mattia.egloff@pm.me>"
+SPDX-License-Identifier = "GPL-3.0-or-later"
+
+# Dotfiles with no comment syntax of their own worth a header.
+[[annotations]]
+path = [".gitignore", ".markdownlint.json"]
+SPDX-FileCopyrightText = "2026 Mattia Egloff <mattia.egloff@pm.me>"
+SPDX-License-Identifier = "GPL-3.0-or-later"
