@@ -1,0 +1,8 @@
+# SPDX-FileCopyrightText: 2026 Mattia Egloff <mattia.egloff@pm.me>
+# SPDX-License-Identifier: GPL-3.0-or-later
+#
+# Names the claims chapter cites that live in an open Core merge request
+# rather than on main: one per line, name first, then the MR that carries
+# it. check-claim-names.sh reports them as PENDING instead of failing, and
+# fails once the name is on main so the line is removed (ratchet).
+contact_only_after_approval core!2028 (formal models round 8, link_exchange.spthy)

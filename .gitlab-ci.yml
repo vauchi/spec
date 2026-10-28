@@ -56,6 +56,25 @@ check:vectors:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
     - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
 
+# Every test, lemma and invariant the claims chapter names must exist in
+# Core or the end-to-end repository, or the claim backs nothing
+# (vauchi/private#874). The self-test runs first so a broken check cannot
+# pass silently (CC-27).
+check:claim-names:
+  stage: lint
+  tags: [docker]
+  image: ${CI_DEPENDENCY_PROXY_GROUP_IMAGE_PREFIX}/alpine:3.21
+  needs: []
+  script:
+    - sh ci/check-claim-names.sh --self-test
+    - wget -qO /tmp/core.tar.gz "https://gitlab.com/vauchi/core/-/archive/main/core-main.tar.gz"
+    - wget -qO /tmp/e2e.tar.gz "https://gitlab.com/vauchi/e2e/-/archive/main/e2e-main.tar.gz"
+    - mkdir -p /tmp/roots && tar -xzf /tmp/core.tar.gz -C /tmp/roots && tar -xzf /tmp/e2e.tar.gz -C /tmp/roots
+    - sh ci/check-claim-names.sh src/claims.md /tmp/roots/core-main/vauchi-core /tmp/roots/core-main/vauchi-app /tmp/roots/e2e-main
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+
 secret_detection:
   allow_failure: false
   stage: lint
