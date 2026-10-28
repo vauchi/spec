@@ -39,10 +39,10 @@ Extracted on 2026-10-28 from the security-claims page of vauchi.app/docs, itself
 ## S4. Public keys never route traffic
 
 - **Attacker**: Relay operator with full logs.
-- **Statement**: Mailboxes are addressed by tokens that rotate daily; a log holds tokens, not identities, and a token from one day does not name the same mailbox the next.
+- **Statement**: Mailboxes are addressed by tokens that rotate daily; a log holds tokens, not identities, and a token from one day does not name the same mailbox the next. The statement is about mailboxes; three other relay routes are addressed by an identity key or its hash and are listed under *Partial*.
 - **If false**: The relay links mailboxes to identities and across days, and builds the contact graph.
 - **Status**: partial
-- **Backed by**: tests `unsolicited_tokens_are_rejected_for_immediate_fetches`, `unsolicited_tokens_are_rejected_for_delayed_fetches` and `unattributed_blobs_are_not_delivered_or_acknowledged` in `delayed_mailbox_routing_tests.rs`. Partial: cross-day unlinkability is a design argument (and, in Core's round-8 models, `mailbox_token.spthy`) without a dedicated experiment.
+- **Backed by**: tests `unsolicited_tokens_are_rejected_for_immediate_fetches`, `unsolicited_tokens_are_rejected_for_delayed_fetches` and `unattributed_blobs_are_not_delivered_or_acknowledged` in `delayed_mailbox_routing_tests.rs`. Partial, three ways. Cross-day unlinkability of a *mailbox* is a design argument (and, in Core's round-8 models, `mailbox_token.spthy`) without a dedicated experiment. The *fetcher* is linkable across days: each cycle fetches today's and yesterday's token for every contact in one request set, so consecutive days' sets overlap in yesterday's real tokens and the relay can chain one anonymous fetcher for as long as it fetches, and tell its padding from its real tokens (Relay, security considerations; vauchi/private#890). And guardian sets, recovery proofs and purge requests are addressed by the owner's identity key or its hash (Social Recovery A4 and B3, Relay A7): a stable, identity-bound address on the relay, by design, so that contacts can find a recovery and so that deletion is the identity's own act.
 - **Section**: [relay](protocols/relay.md)
 
 ## S5. Message sizes are padded

@@ -296,9 +296,22 @@ failed refetch while the gateway still holds its window.
   the relay stores no key, and a token from one day does not name the
   mailbox of the next. Partial: cross-day unlinkability is a design
   argument backed by `mailbox_token.spthy` in Core's round 8 and by
-  the token tests, not by an experiment against the relay's logs; and
-  a mailbox *is* linkable within a day across its fetches, which is
-  what the per-mailbox rate limit and quota rely on.
+  the token tests, not by an experiment against the relay's logs; a
+  mailbox *is* linkable within a day across its fetches, which is
+  what the per-mailbox rate limit and quota rely on; and the
+  **fetcher** is linkable across days. Each cycle the client fetches
+  today's and yesterday's token of every contact in one request set
+  (Card Update and Sync C1, `registration_tokens` in
+  `mailbox_token.rs`), so the sets of two consecutive days intersect
+  in exactly yesterday's real tokens. The relay can chain one
+  anonymous fetcher for as long as it keeps fetching, count its
+  contacts, see which of its mailboxes received blobs on which day,
+  and tell the recurring real tokens from the random padding. The
+  delayed path spreads the timing of the requests, not their
+  contents. Tracked as vauchi/private#890. Three routes are addressed
+  by an identity key or its hash on purpose: guardian sets under
+  `SHA-256(owner_pk || "guardians")`, recovery proofs under
+  `SHA-256(old_pk)` and purge with the key itself (A7).
 - **What the application relay learns.** Per blob: a token, a size
   (a padding bucket after the client's padding, a ladder rung on the
   way out), a time of arrival and of acknowledgement, an origin-hint
