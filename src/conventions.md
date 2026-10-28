@@ -72,7 +72,7 @@ way, and each has, or lacks, a check that fails when it does:
 |-----------|--------------|------------|
 | A vector value | Core's `protocol_test_vectors_tests.rs` recomputes it from the shipped functions; this book's copy is compared byte for byte in CI (`check:vectors`), as is the docs site's | A derivation changes, or a copy lags Core `main` |
 | A claim's lemma | Core's `test:formal` job runs every Tamarin, Quint and Kani model with a control that must fail | The lemma stops proving or the control stops failing |
-| A claim's test name | Nothing mechanical yet; the name is checked by hand at extraction | A test is renamed or removed (tracked as vauchi/private#874) |
+| A claim's test name | `check:claim-names` greps every identifier the claims chapter names, as a whole word, in Core `main` and the end-to-end repository; a name in an open merge request waits in `ci/claim-names.pending` until it lands (spec!6, vauchi/private#874) | A test or lemma is renamed or removed, or a pending name lands and its line stays |
 | A certification lane | The end-to-end repository's blocking lanes on every merge request, `main` and schedule; the release gate refuses a missing, stale or partial report | A lane case fails or is skipped |
 | A normative sentence, state or failure case | The chapter's status line pins the Core commit it was read from; re-extraction is by hand | Core moves past the pinned commit (the changelog records re-extractions) |
 | A source-file link | None; links name `main` | A file is moved or renamed |
