@@ -158,8 +158,8 @@ Extracted on 2026-10-28 from the security-claims page of vauchi.app/docs, itself
 - **Attacker**: Someone impersonating a guardian or the recovering user.
 - **Statement**: Restoring from guardians needs the threshold of guardians' shares; a member of the same recovery group can stand in for an absent guardian; each side rekeys only with the real counterpart.
 - **If false**: A single guardian, or an impostor, recovers someone else's identity.
-- **Status**: shipped
-- **Backed by**: Tamarin `social_recovery.spthy`, lemmas `backup_needs_both_guardians`, `a_group_mate_can_stand_in`, `john_rekeys_only_with_the_real_alice` and `alice_rekeys_only_with_the_real_john`
+- **Status**: partial
+- **Backed by**: Tamarin `social_recovery.spthy`, lemmas `backup_needs_both_guardians` and `a_group_mate_can_stand_in` for the first two sentences, with the Shamir split, sealing, response and restore as Core API under test (Social Recovery A). Partial: the third sentence is backed by `john_rekeys_only_with_the_real_alice` and `alice_rekeys_only_with_the_real_john`, which model the rekey of Social Recovery C, a design that is not in the code; and the app does not yet export a guardian backup on designation or hand shares to guardians (vauchi/private#796).
 - **Section**: [social-recovery](protocols/social-recovery.md)
 
 ## Not claimed
