@@ -7,6 +7,15 @@ Each spec tag maps to the Core commit it was extracted from.
 
 ## Unreleased (towards 0.1-draft)
 
+- Chapters "In-Person Exchange", "Keys and Cards", "Card Update and
+  Sync", "Relay" and "Social Recovery" extracted 2026-10-28 from Core
+  `612992b0b`, relay `9b869ac3b` and ohttp-relay `a4e7c6eed`. Every
+  placeholder is now a chapter; each names where the code is weaker
+  than a claim's sentence (S7's signature argument holds for the
+  relay-sync tier only; S13's shipped backup is v6; S16 stops at the
+  verdict; device-to-device sync and the first genesis message have no
+  forward secrecy; one operator runs both relay hops).
+
 - Chapter "Link and Relay-Mediated Exchange" extracted from Core
   `68d7626c6` and relay `525334985`: link format, nonce-derived
   handshake slots, escrow derivations, the relay's two-slot rules, the

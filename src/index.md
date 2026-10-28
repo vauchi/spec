@@ -35,8 +35,9 @@ make those statements true, as the code implements them today.
 Every protocol chapter has the same shape: goal, actors, message flow,
 normative operations, state machine, failure cases, security
 considerations, vectors. Chapters are ordered the way a reviewer will
-attack them. A chapter marked *not yet extracted* is a placeholder
-with its sources listed; it makes no claim.
+attack them. Each chapter's status line names the commits it was
+extracted from; a chapter marked *not yet extracted* would be a
+placeholder with its sources listed and make no claim.
 
 Related: the plain-language pages at
 [vauchi.app/docs](https://vauchi.app/docs/security/), the Tamarin,
