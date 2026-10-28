@@ -308,7 +308,13 @@ failed refetch while the gateway still holds its window.
   contacts, see which of its mailboxes received blobs on which day,
   and tell the recurring real tokens from the random padding. The
   delayed path spreads the timing of the requests, not their
-  contents. Tracked as vauchi/private#890. Three routes are addressed
+  contents. core!2060 (vauchi/private#890, in review) builds one
+  padded batch set per day epoch and fetches each batch on its own, so
+  no request spans two days; the relay is then left with the timing
+  of a day's requests, which the delayed path spreads, and the
+  per-day overlap of the catch-up requests with the days they
+  revisit, which is inherent to fetching an old token at all. Three
+  routes are addressed
   by an identity key or its hash on purpose: guardian sets under
   `SHA-256(owner_pk || "guardians")`, recovery proofs under
   `SHA-256(old_pk)` and purge with the key itself (A7). And the
