@@ -122,7 +122,7 @@ check:claim-names:
     - for r in core e2e relay ohttp-relay; do wget -qO "/tmp/$r.tar.gz" "https://gitlab.com/vauchi/$r/-/archive/main/$r-main.tar.gz" || exit 1; tar -xzf "/tmp/$r.tar.gz" -C /tmp/roots || exit 1; done
     # The claims chapter and every protocol chapter: the chapters name the
     # function behind each normative operation, in Core and the two relays.
-    - for f in src/claims.md src/protocols/*.md; do sh ci/check-claim-names.sh "$f" /tmp/roots/core-main/vauchi-core /tmp/roots/core-main/vauchi-app /tmp/roots/core-main/vauchi-protocol /tmp/roots/core-main/vauchi-cli /tmp/roots/e2e-main /tmp/roots/relay-main /tmp/roots/ohttp-relay-main; done
+    - for f in src/claims.md src/protocols/*.md; do sh ci/check-claim-names.sh "$f" /tmp/roots/core-main/vauchi-app /tmp/roots/core-main/vauchi-cabi /tmp/roots/core-main/vauchi-core /tmp/roots/core-main/vauchi-hardware /tmp/roots/core-main/vauchi-platform /tmp/roots/core-main/vauchi-protocol /tmp/roots/e2e-main /tmp/roots/relay-main /tmp/roots/ohttp-relay-main; done
   rules:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
     - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
