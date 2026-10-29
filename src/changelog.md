@@ -7,6 +7,10 @@ Each spec tag maps to the Core commit it was extracted from.
 
 ## Unreleased
 
+- The drift checks run nightly (spec!12); claim annotations `@claim: S<n>`
+  in Core and e2e with `check:claim-annotations` (spec!13); Core's
+  `check:spec-names` (core!2078) and the `Spec:` commit trailer (VGT12)
+  close the loop from Core's side; S5 names its padding tests.
 - The disclosure page names the PGP key for security@vauchi.app and its
   fingerprint (vauchi/private#905); reports no longer have to travel in
   clear.

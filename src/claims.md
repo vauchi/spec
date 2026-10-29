@@ -7,6 +7,8 @@ These are the claims a reviewer is invited to falsify. Each one names its attack
 
 Proof pointers name test functions and lanes in [vauchi/core](https://gitlab.com/vauchi/core) and [vauchi/e2e](https://gitlab.com/vauchi/e2e), and lemmas in Core's `vauchi-core/verification/` and `vauchi-app/verification/`. Lemma names that end in a behaviour, such as `qr_leak_exposes_seed`, are exists-trace lemmas: they prove that the attack exists in the model, and are published on purpose.
 
+The link runs both ways. Every test, lemma and invariant named here carries the comment `@claim: S<n>` where it is defined, and CI fails when an annotation names a claim this chapter does not have or when a shipped or partial claim has no annotation left (`check:claim-annotations`, in this book and in Core's `check:spec-names`). A claim cannot outlive its last proof, and a proof cannot point at a claim that is gone.
+
 Extracted on 2026-10-28 from the security-claims page of vauchi.app/docs, itself verified against Core `main` that week. Every *Section* link leads to an extracted chapter; where a chapter found the code weaker than the claim's sentence, its security considerations say so and the claim's entry is the one to read next.
 
 ## S1. The relay cannot read a contact card or an update
@@ -51,7 +53,7 @@ Extracted on 2026-10-28 from the security-claims page of vauchi.app/docs, itself
 - **Statement**: Ciphertexts are padded to fixed buckets before encryption, so the relay sees bucket sizes rather than exact lengths.
 - **If false**: Card contents or update kinds are inferred from lengths.
 - **Status**: partial
-- **Backed by**: padding tests in `crypto_tests.rs`. Partial: the claim that buckets defeat a traffic-analysis attacker has not been measured against one.
+- **Backed by**: tests `test_pad_unpad_roundtrip_small`, `test_pad_overflow_alignment` and `test_pad_very_large_message` in `crypto/padding.rs`, the Kani proof `unpad_never_panics_and_only_accepts_a_prefixed_plaintext` in `crypto/padding_proofs.rs`, and `an_empty_message_unpads_from_a_bare_length_prefix` in `crypto_tests.rs`. Partial: the claim that buckets defeat a traffic-analysis attacker has not been measured against one.
 - **Section**: [update-and-sync](protocols/update-and-sync.md)
 
 ## S6. Watching the QR exchange does not give the session key
