@@ -7,6 +7,10 @@ Each spec tag maps to the Core commit it was extracted from.
 
 ## Unreleased
 
+- Related Work: Briar's BQP, Magic Wormhole, SimpleX, Session, Plaxo and
+  social-recovery wallets, each with what Vauchi shares, where it differs
+  and where it is weaker; the short-code exchange is named as weaker than
+  Wormhole's PAKE (vauchi/private#119).
 - The drift checks run nightly (spec!12); claim annotations `@claim: S<n>`
   in Core and e2e with `check:claim-annotations` (spec!13); Core's
   `check:spec-names` (core!2078) and the `Spec:` commit trailer (VGT12)
