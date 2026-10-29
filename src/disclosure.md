@@ -10,6 +10,12 @@
 ## Contact
 
 - Email: **security@vauchi.app**
+- PGP: <https://vauchi.app/.well-known/pgp-key.txt>, fingerprint
+  `4347 B1C6 57A3 97E5 206E 4709 A84E 1AAB D783 0274` (`security.txt`
+  carries the same fingerprint as `openpgp4fpr:`). The encryption
+  subkey lives on the maintainer's hardware tokens only; no agent,
+  server or CI job can decrypt a report. Reports in clear are read too;
+  say so and the reply offers another channel.
 - `security.txt`: published at
   <https://vauchi.app/.well-known/security.txt>. Its Policy field points
   at the short form in the workspace's `SECURITY.md` until this book is
@@ -32,8 +38,8 @@ users.
 ## What to send
 
 What you found, how to reproduce it, which claim (S-number) it breaks
-if it maps to one, and whether you want to be named. There is no PGP
-key; mail is plain.
+if it maps to one, and whether you want to be named. Encrypt to the
+key under *Contact* when you can.
 
 ## What to expect
 

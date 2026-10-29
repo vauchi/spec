@@ -7,6 +7,9 @@ Each spec tag maps to the Core commit it was extracted from.
 
 ## Unreleased
 
+- The disclosure page names the PGP key for security@vauchi.app and its
+  fingerprint (vauchi/private#905); reports no longer have to travel in
+  clear.
 - Vectors `qr_symmetric` (the mutual QR key, tokens and confirmation
   escrow) and `link_exchange` (one link exchange end to end), from
   Core's vector suite; the in-person and link chapters point at them.
