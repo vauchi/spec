@@ -15,6 +15,10 @@ Each spec tag maps to the Core commit it was extracted from.
   list (spec!6); the image and deploy trigger for vauchi.app/spec
   (spec!7). `contact_only_after_approval` left the pending list when
   core!2066 put the round-8 models on Core `main`.
+- Disclosure Policy: the 48-hour reply and 7-day assessment the short
+  forms already promised; high and critical findings are fixed
+  privately and published with their release; medium and above get a
+  CVE (maintainer, 2026-10-29).
 
 ## 0.1-draft (2026-10-28)
 

@@ -37,10 +37,17 @@ key; mail is plain.
 
 ## What to expect
 
-A reply from the maintainer. There is no bug bounty; the project says
-so rather than promising one. Findings are fixed in the open, credited
-if you wish, and listed in the changelog of this book and on the docs
-site's previous-analysis page.
+A reply from the maintainer within 48 hours and an initial assessment
+within 7 days. There is no bug bounty; the project says so rather than
+promising one.
+
+Findings rated low or medium are fixed in the open. Findings rated
+high or critical (a numbered claim broken under conditions an attacker
+can create) are fixed privately and published together with the
+release that fixes them, so users are not exposed before an update
+exists. Either way the fix is credited if you wish and listed in the
+changelog of this book and on the docs site's previous-analysis page;
+findings rated medium or above also get a CVE.
 
 ## Safe harbour (proposed)
 
