@@ -53,7 +53,7 @@ else
     fail "workflow rules must admit CI_PIPELINE_SOURCE == \"schedule\""
 fi
 
-for job in check:vectors check:claim-names; do
+for job in check:vectors check:claim-names check:claim-annotations; do
     block=$(job_block "$job")
     if has_schedule_rule "$block" && ! refuses_schedule "$block"; then
         echo "PASS: $job runs on the nightly schedule"
@@ -63,7 +63,7 @@ for job in check:vectors check:claim-names; do
 done
 
 for job in $(job_names); do
-    case "$job" in check:vectors | check:claim-names) continue ;; esac
+    case "$job" in check:vectors | check:claim-names | check:claim-annotations) continue ;; esac
     block=$(job_block "$job")
     # shellcheck disable=SC2016 # matches the literal YAML text
     if ! printf '%s\n' "$block" | grep -q 'CI_COMMIT_BRANCH == \$CI_DEFAULT_BRANCH'; then
