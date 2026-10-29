@@ -26,15 +26,17 @@ key. Briar's app and protocol were reviewed by Cure53 in March 2017.
 
 - **Same.** Both sides scan, both contribute a fresh key, and the
   camera is the authenticated channel.
-- **Different.** Vauchi's QR carries the keys themselves, signed by
-  the identity key, not a commitment, and the session key binds both
-  identity keys and both ephemeral keys in sorted order (A4,
-  claim [S6](claims.md)). The exchange ends in a persistent contact
+- **Different.** Vauchi's QR carries no commitment: it holds the
+  Ed25519 identity key and a fresh X25519 key in the clear, with an
+  Ed25519 signature by the identity key over the payload (A1). The
+  Diffie-Hellman is between the two fresh keys only; the identity keys
+  enter through the HKDF `info`, next to both fresh keys, each pair in
+  sorted order (A4, claim [S6](claims.md)). The exchange ends in a persistent contact
   whose card later updates; Briar's ends in a contact for messaging.
 - **Weaker or untested.** Briar's protocol has had an external audit;
-  Vauchi's has not ([Security Claims](claims.md), *Not claimed*). Vauchi adds tiers Briar does
-  not have, a one-QR-then-Bluetooth path (B) and NFC (C), each with
-  its own limits stated in that chapter.
+  Vauchi's has not ([Security Claims](claims.md), *Not claimed*).
+  Vauchi adds tiers Briar does not have, a one-QR-then-Bluetooth path
+  (B) and NFC (C), each with its own limits stated in that chapter.
 
 ## Code-based exchange: Magic Wormhole
 
@@ -99,13 +101,16 @@ from a deterministic mapping of the recipient's public key.
 - **Different.** The two designs route in opposite ways: Session
   stores messages under the recipient's public key, Vauchi never
   routes mailbox traffic by a public key (S4).
+- **Weaker or untested.** Nothing beyond what holds for every row of
+  this chapter: Vauchi has no external audit, and the three
+  identity-keyed relay routes listed under SimpleX apply here too.
 
 ## Self-updating address books: Plaxo
 
 Plaxo, launched in 2002 and shut down at the end of 2017, kept each
 person's entry on its own servers so that a change one person made
 appeared in the address books of everyone who held them. The idea is
-Vauchi's central feature, and it is twenty years older than Vauchi.
+Vauchi's central feature, and it predates Vauchi by twenty-four years.
 
 - **Different.** Plaxo's servers held every card in the clear and
   matched contacts by address book upload, which in 2004 drew criticism
