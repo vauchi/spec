@@ -89,7 +89,7 @@ lint:markdown:
 # Core stays canonical for the vectors until Core CI verifies against a
 # pinned spec tag (ADR-076, decision 5); until then this fails when the
 # copy here drifts from core main.
-# The two drift checks also run on the nightly schedule, against whatever
+# The three drift checks also run on the nightly schedule, against whatever
 # Core, the relays and e2e have on main that night, so a merge there that
 # invalidates a copy or renames a cited function is found the next morning
 # (vauchi/private#874). Every other job refuses the schedule: on it,
@@ -123,6 +123,25 @@ check:claim-names:
     # The claims chapter and every protocol chapter: the chapters name the
     # function behind each normative operation, in Core and the two relays.
     - for f in src/claims.md src/protocols/*.md; do sh ci/check-claim-names.sh "$f" /tmp/roots/core-main/vauchi-app /tmp/roots/core-main/vauchi-cabi /tmp/roots/core-main/vauchi-core /tmp/roots/core-main/vauchi-hardware /tmp/roots/core-main/vauchi-platform /tmp/roots/core-main/vauchi-protocol /tmp/roots/e2e-main /tmp/roots/relay-main /tmp/roots/ohttp-relay-main; done
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+    - if: $CI_PIPELINE_SOURCE == "schedule"
+
+# The inverse link: tests, lemmas and invariants say which claim they back
+# with `@claim: S<n>`, and this fails when an annotation names no claim or
+# a shipped or partial claim has no annotation left in Core or e2e
+# (vauchi/private#874). Nightly like the two checks above.
+check:claim-annotations:
+  stage: lint
+  tags: [docker]
+  image: ${CI_DEPENDENCY_PROXY_GROUP_IMAGE_PREFIX}/alpine:3.21
+  needs: []
+  script:
+    - sh ci/check-claim-annotations.sh --self-test
+    - mkdir -p /tmp/roots
+    - for r in core e2e; do wget -qO "/tmp/$r.tar.gz" "https://gitlab.com/vauchi/$r/-/archive/main/$r-main.tar.gz" || exit 1; tar -xzf "/tmp/$r.tar.gz" -C /tmp/roots || exit 1; done
+    - sh ci/check-claim-annotations.sh src/claims.md /tmp/roots/core-main/vauchi-core /tmp/roots/core-main/vauchi-app /tmp/roots/core-main/vauchi-protocol /tmp/roots/e2e-main
   rules:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
     - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
