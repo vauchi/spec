@@ -441,7 +441,8 @@ key; `now - t_D ≤ 60`; `c_D == SHA-256(received ciphertext)`
 (`BleCommitmentMismatch`). Then it derives `SK`, decrypts the card
 with AAD `id_D || id_S || t_D` (`BleDecryptionFailed`), checks the
 payload's CRC16 and requires its identity key to equal `id_D`
-(`IdentityMismatch`), then encrypts its own card with AAD `id_S || id_D || t_S`,
+(`IdentityMismatch`) and its exchange key to equal the KeyAck's `x_D`
+(`ExchangeKeyMismatch`), then encrypts its own card with AAD `id_S || id_D || t_S`,
 and sends `c_S = SHA-256(ciphertext)` on `CHAR_HANDSHAKE_WRITE` and the
 ciphertext on `CHAR_DATA_WRITE` (`…96`).
 
@@ -451,8 +452,9 @@ received ciphertext before anything else, stores the ciphertext, and
 replies with its own commitment `c_D` as the reveal on
 `CHAR_HANDSHAKE_NOTIFY`. It then decrypts the initiator's card with
 AAD `id_S || id_D || t_S`, the offer timestamp it kept in B5, checks
-the CRC16 and requires the embedded identity to equal `id_S` before
-completion (`IdentityMismatch`).
+the CRC16 and requires the embedded identity to equal `id_S`
+(`IdentityMismatch`) and the embedded exchange key to equal the
+KeyOffer's `x_S` (`ExchangeKeyMismatch`) before completion.
 
 **B9. Initiator on the reveal** (`complete_exchange`). The 32-byte
 reveal MUST equal the commitment received in the KeyAck; the
@@ -477,14 +479,12 @@ AEAD nonce.
 encoding of identity key, display name, exchange key, the card's
 fields as label and value pairs, an optional avatar and a CRC16 over
 the content. The CRC is a sanity check; integrity comes from the AEAD.
-The embedded identity MUST match the identity received in the handshake.
-The handshake does not prove possession of that identity key. Binding to
-the intended peer requires identity and exchange-key pins obtained out
-of band; without them a peer can claim an existing identity and the
-current persistence path may rekey that contact.
-The payload exchange key is the peer's key for the future update
-channel; supported legacy sessions may use a different handshake
-exchange key, so BLE does not require those two keys to be equal.
+The embedded identity and exchange key MUST equal the ones received in
+the handshake (B7, B8). The handshake proves possession of the exchange
+key (DH1) but not of the identity key, so binding to the intended peer
+still requires identity and exchange-key pins obtained out of band:
+without them a peer can store a new contact under an identity it does
+not hold. It cannot rekey an existing contact (B12).
 On completion the receiver rebuilds a `ContactCard`, dropping a field
 or an avatar that fails validation (the avatar goes through the same
 WebP normalisation as a local one, ADR-042) rather than the contact.
@@ -495,7 +495,11 @@ shared key and seeds the Double Ratchet with
 from its card payload (`apply_ble_machine_event`). This is the only
 Bluetooth completion path: Core's `ExchangeSession` no longer runs a
 Bluetooth exchange and refuses its Bluetooth events with
-`InvalidState` (vauchi/private#893).
+`InvalidState` (vauchi/private#893). An exchange never rekeys a
+contact that already exists: a repeat exchange refreshes its card and
+keeps the shared key and ratchet of the first (`save_exchanged_contact`,
+vauchi/private#941). This holds for every in-person completion path,
+QR and multi-stage included.
 
 **B13. Reciprocity over the link.** After its contact is durably
 saved, the initiator sends an ack: `0x01 || AEAD(SK, our_token; AAD =
@@ -586,12 +590,12 @@ app clears every Glance value when the exchange screen is left.
   derivation: they appear in the AAD as labels nobody signs. The AAD
   ties each ciphertext to those labels and the sender's timestamp, so
   a card cannot be redirected or replayed into another session.
-- **Identity binding.** The card identity is checked against the peer's
-  wire identity before persistence. That prevents a card from changing
-  identity after the handshake. Without out-of-band identity and exchange
-  key pins, the handshake does not prove ownership of the wire identity;
-  an unpinned peer can claim an existing identity and the persistence path
-  can rekey that contact (vauchi/private#941).
+- **Identity binding.** The card's identity and exchange key are
+  checked against the handshake's before persistence, so a card cannot
+  change either after the handshake, and no exchange rekeys an existing
+  contact. Without out-of-band pins the handshake still does not prove
+  ownership of the wire identity: an unpinned peer can create a new
+  contact under an identity it does not hold (vauchi/private#941).
 - **Confirmation over the link** is authenticated by `SK` alone (B13):
   whoever holds `SK` can produce the peer's token. On this channel that
   is the two devices, or an attacker who already broke the handshake.
