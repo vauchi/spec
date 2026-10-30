@@ -287,8 +287,6 @@ of 2026-10-30:
   48 h.
 - A contact's check reads no time at all: `validate` and
   `verify_for_contact` take no clock (vauchi/private#926).
-- The CLI's `recovery vouch --yes` vouches for a claim whose `old_pk`
-  is no contact (vauchi/private#928).
 - The claim and proof parsers accept trailing bytes; the proof version
   is not checked; a proof with threshold 0 validates; a claim stamped
   in the future never expires; the recovering device refuses an

@@ -12,6 +12,9 @@ Each spec tag maps to the Core commit it was extracted from.
   unsigned uploads, takes the rate bucket lowercase and keeps proofs
   9 days (vauchi/private#927, relay `issue/927`). The #927 defect
   bullet is gone; the failure case for an aged proof says 9 days.
+- Social Recovery B2: the CLI's `recovery vouch` now goes through
+  Core's contact check (vauchi/private#928, cli `issue/928`); its
+  defect bullet is gone.
 
 - Every chapter checked against Core `a9a911b0a`, relay `f3034bb` and
   ohttp-relay `a4e7c6e` (vauchi/private#951). Statements that were
