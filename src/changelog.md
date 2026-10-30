@@ -19,7 +19,10 @@ Each spec tag maps to the Core commit it was extracted from.
   contact's name, and the vouch check accepts it, so a thief's
   revocation cannot silence the real recovery's helpers
   (vauchi/private#935, core `issue/935`).
-
+- Social Recovery B4: a contact refuses a proof whose earliest voucher is
+  older than 192 h, not 90 days; the recovery is one 192-hour window
+  (maintainer, 2026-10-30, vauchi/private#959). Core's check landed
+  the same day (core `issue/959`, vauchi/private#926).
 - Every chapter checked against Core `a9a911b0a`, relay `f3034bb` and
   ohttp-relay `a4e7c6e` (vauchi/private#951). Statements that were
   wrong are corrected. Code defects found are stated as defects

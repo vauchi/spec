@@ -255,9 +255,12 @@ conflict detection has its data but no caller.
 
 **B4. Verdict** (`verify_for_contact`). A contact MUST refuse a proof
 whose voucher timestamps span more than 96 h, or whose earliest voucher
-is more than 90 days old. Both bounds read the vouchers' timestamps
-because each is signed by a different helper; the proof's own
-`created_at` and `expires_at` are set by the recovering identity alone.
+is more than 192 h old: the recovery is one window of 192 h in which
+the person collects vouchers, restores the backup and tells contacts
+about the new key (maintainer, 2026-10-30; rekeys may take longer).
+Both bounds read the vouchers' timestamps because each is signed by a
+different helper; the proof's own `created_at` and `expires_at` are set
+by the recovering identity alone.
 Otherwise the contact counts the vouchers signed by its own contacts,
 excluding the claim's old and new keys: at least the verification
 threshold (default 2, never above the recovery threshold) is **high
@@ -370,7 +373,7 @@ contact, with a reminder time the shell supplies; the 7-day
   signature: refused when the voucher is added and again when the
   proof is validated.
 - Vouchers spanning more than 96 h, or an earliest voucher older than
-  90 days: the contact refuses the proof; the person starts a fresh
+  192 h: the contact refuses the proof; the person starts a fresh
   claim.
 - Fewer than `t` matching shares, or every subset failing the key
   confirmation: `DecryptionFailed`, nothing restored.
