@@ -176,9 +176,9 @@ the tap or the cable is the proof.
 key, the card the shell supplies, `K` as the shared key, the proximity
 confidence, the transport and trust metrics `(transport, confidence,
 timestamp)`. The contact's `exchange_timestamp` SHOULD be the time of
-the exchange, but `handle_complete_exchange` (and `process_ble_phase4`
-on the old BLE path) passes 0, so a `Pending` contact from the session
-reads as `Unreciprocated` at once (D; vauchi/private#948). The relay
+the exchange, but `handle_complete_exchange` passes 0, so a `Pending`
+contact from the session reads as `Unreciprocated` at once (D;
+vauchi/private#948). The relay
 URL from the peer's QR is stored as the
 contact's relay URL and copied onto each pending update as
 `target_relay_url`, but no shipped path dispatches by it: every send
@@ -492,15 +492,10 @@ WebP normalisation as a local one, ADR-042) rather than the contact.
 **B12. Persisting.** The app persists the contact with `SK` as its
 shared key and seeds the Double Ratchet with
 `bootstrap_exchange_ratchet` as in A8, the peer's exchange key taken
-from its card payload (`apply_ble_machine_event`). The older
-`ExchangeSession::new_ble` path in Core instead derives a separate
-relay key `HKDF(X25519(s_ours, s_theirs), "vauchi-ble-relay-key-v1" ||
-sorted ids)` for the contact (`process_ble_phase4`), where `s_*` is
-the fresh key pair `new_ble` generates and puts in its card payload as
-the exchange key; the peer's payload key is therefore the peer's
-session key, and the DH is ephemeral to ephemeral. The two paths
-agree with themselves on both sides but not with each other, and only
-the app path is wired to a screen today (vauchi/private#893).
+from its card payload (`apply_ble_machine_event`). This is the only
+Bluetooth completion path: Core's `ExchangeSession` no longer runs a
+Bluetooth exchange and refuses its Bluetooth events with
+`InvalidState` (vauchi/private#893).
 
 **B13. Reciprocity over the link.** After its contact is durably
 saved, the initiator sends an ack: `0x01 || AEAD(SK, our_token; AAD =
@@ -670,7 +665,7 @@ tap.
 plaintext is an `NfcCardPayload`: identity key, display name, exchange
 key and a CRC16. AAD is `sender_id || receiver_id || xid`, so a card
 decrypts only for the pair and tap it was made for. An AEAD failure is
-`NfcDecryptionFailed`, an unparseable payload `SerializationFailed`,
+`NfcDecryptionFailed`, an unparsable payload `SerializationFailed`,
 and a CRC failure after a successful decryption
 `NfcCrcMismatch`. After those checks the embedded identity and exchange
 key MUST match the signed NFC offer or ack (`IdentityMismatch`,
