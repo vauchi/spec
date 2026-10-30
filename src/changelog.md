@@ -15,6 +15,10 @@ Each spec tag maps to the Core commit it was extracted from.
 - Social Recovery B2: the CLI's `recovery vouch` now goes through
   Core's contact check (vauchi/private#928, cli `issue/928`); its
   defect bullet is gone.
+- Social Recovery C: the revocation tombstone keeps the key and the
+  contact's name, and the vouch check accepts it, so a thief's
+  revocation cannot silence the real recovery's helpers
+  (vauchi/private#935, core `issue/935`).
 
 - Every chapter checked against Core `a9a911b0a`, relay `f3034bb` and
   ohttp-relay `a4e7c6e` (vauchi/private#951). Statements that were

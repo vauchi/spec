@@ -345,9 +345,13 @@ What does exist: the recovering user's **identity revocation**,
 signed by the old key and sent to each contact's mailbox
 (`broadcast_identity_revocations`); the contact verifies it, destroys
 the contact's CEK, deletes the contact and records a tombstone that
-refuses the old key's future updates. It is the deletion path's
-message (Keys and Cards, C3), usable after a recovery only while the
-old key is still in the owner's hands.
+refuses the old key's future updates. The tombstone keeps the key (it
+is the row's id) and the contact's name, encrypted at rest, and the
+vouch check (B2) accepts it: a thief holding the old device can send
+this revocation to every contact, and without the tombstone no one
+could vouch for the real owner's recovery (vauchi/private#935). It is
+the deletion path's message (Keys and Cards, C3), usable after a
+recovery only while the old key is still in the owner's hands.
 
 ## State machine
 
