@@ -237,15 +237,21 @@ The proof (postcard, version 2, in the clear) is uploaded under
 `SHA-256(old_pk)` with an owner signature by the new identity over
 `"recovery-store" || key_hash || SHA-256(proof) || timestamp as BE
 u64`, which the relay verifies within 60 s against the `owner_pk` sent
-with it; an unsigned upload is stored unowned and never replaces an
-owned one. The relay keeps one proof per hash, owned by its first
-signer until it expires; proofs of at most 4 KiB for 90 days from the
-last upload; rate-limits store and query at 10 per minute per hash, in
-separate buckets; and answers a query of at most 50 hashes. Core
+with it. The relay reads the proof's first 65 bytes, the version byte
+then `old_pk` and `new_pk`, and refuses an upload whose version is not
+2, whose `old_pk` does not hash to the key hash, whose `owner_pk` is
+not the proof's `new_pk`, or that carries no signature
+(vauchi/private#927). It keeps one proof per owner under a hash, at
+most four owners, each replaced only by its own key; a fifth owner is
+refused with `429` until a slot expires. Proofs are at most 4 KiB and
+are kept 9 days from their last upload, a day past the 192 h a contact
+accepts vouchers (B4). Store and query are rate-limited at 10 per
+minute per hash, taken lowercase, in separate buckets; a query answers
+at most 50 hashes and returns every live proof under each. Core
 defines a revocation signed by the **old** key (`RecoveryRevocation`)
-and a client-side `RecoveryConflict::detect`; neither is wired: no
-route carries a revocation, and with one proof per hash a contact
-never sees a conflicting proof.
+and a client-side `RecoveryConflict::detect`; the revocation is not
+wired (no route carries it), and no shipped screen queries proofs, so
+conflict detection has its data but no caller.
 
 **B4. Verdict** (`verify_for_contact`). A contact MUST refuse a proof
 whose voucher timestamps span more than 96 h, or whose earliest voucher
@@ -283,11 +289,6 @@ of 2026-10-30:
   `verify_for_contact` take no clock (vauchi/private#926).
 - The CLI's `recovery vouch --yes` vouches for a claim whose `old_pk`
   is no contact (vauchi/private#928).
-- Anyone who knows `old_pk`, which every contact does, can sign the
-  first upload under its hash and keep the slot by re-uploading: the
-  relay never checks `owner_pk` against the proof's `new_pk`
-  (vauchi/private#927). The store bucket is keyed on the hash as sent,
-  so changing its hex case escapes the rate limit.
 - The claim and proof parsers accept trailing bytes; the proof version
   is not checked; a proof with threshold 0 validates; a claim stamped
   in the future never expires; the recovering device refuses an
@@ -371,8 +372,9 @@ contact, with a reminder time the shell supplies; the 7-day
   claim.
 - Fewer than `t` matching shares, or every subset failing the key
   confirmation: `DecryptionFailed`, nothing restored.
-- Guardian set older than 365 days or proof older than 90 days: gone
-  from the relay; guardians re-upload by designating again.
+- Guardian set older than 365 days or proof older than 9 days: gone
+  from the relay; guardians re-upload by designating again, the person
+  re-uploads the proof.
 - Rate limit on the relay's recovery routes: `429` on the direct
   routes, an in-band `rate limit exceeded` error over OHTTP; retry
   later.
