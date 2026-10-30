@@ -260,11 +260,26 @@ checkpoint advances only after an exhaustive pass.
    `(contact, device)`: `version > 0 && version < last` is
    `StaleVersion`. The floor is per sender device because each device
    numbers from its own storage.
-9. The delta is applied: a field is replaced unless the stored copy is
-   newer, removed fields go, the name changes; the new CEK is stored.
-10. Ratchet state, nonce, card and version floor are written in one
-    transaction; on any failure nothing is written and the ratchet
-    does not advance past the message.
+9. A durable per-contact map orders each field and the display name by
+   `(signed timestamp, sender device id, delta version)`. Additions use
+   the field's signed `updated_at`; removals and names use the delta's
+   signed timestamp. Strictly older tuples are skipped. Removal stamps
+   remain as tombstones even after the field disappears. Equal legacy
+   tuples have no causal distinction and retain their apply semantics.
+   The new CEK is stored even if all card changes were skipped.
+10. Ratchet state, nonce, card, version floor and ordering state are
+    written in one transaction. Failures must leave the ciphertext
+    retryable without advancing the durable ratchet.
+
+The ordering map holds at most 4096 keys per contact, including the
+name. Existing keys can still change at capacity; a new distinct key
+fails with `OrderingCapacityExceeded`. Tombstones are never expired to
+make room. Upgrade seeds live field timestamps but cannot reconstruct
+previously removed fields or a previous name's timestamp. The map
+survives storage reopening and key rotation; current contact/full
+backup formats do not transfer it. These are limits on rollback
+protection, which also trusts the sender devices' signed clocks. A
+relay that withholds an update can still delay learning the new state.
 
 **C4. Blocking and receipts.** A blocked contact receives no further
 updates and its updates fail at step 1; the block is local and synced
@@ -307,10 +322,12 @@ Source: `vauchi-core/src/sync/device_sync.rs`,
 
 **E1. Items.** Changes an owner makes are journaled as `SyncItem`s
 (contact added or removed, card and visibility changes, groups, tags,
-trust, blocks, notes, deletion scheduling, ...) with millisecond
-timestamps; conflicts resolve last-write-wins per key, ties to the
-higher device id, so every device converges. A batch holds at most
-10 000 items.
+trust, blocks, notes, deletion scheduling, ...) with Unix-second
+timestamps. Cross-device conflicts resolve last-write-wins per key,
+with timestamp ties going to the higher device id. Scheduling and
+cancelling deletion share one `deletion:state` key. Old separately
+persisted schedule/cancel stamps are folded into its maximum on load.
+A batch holds at most 10 000 JSON entries, including metadata.
 
 **E2. Encryption and addressing.** A batch for device `D` is encrypted
 with tag `0x02` under
@@ -332,7 +349,43 @@ never drains another's copy. The legacy envelope sets `sender_id` to
 the identity key in hex for these messages; the HTTP transport sends
 only the token and the ciphertext.
 
-**E3. Duress.** Under a duress unlock every item is replaced by a cover
+**E3. Durable ordering.** Updated senders persist a checked, increasing
+journal sequence with each pending item and the version vector in the
+same transaction. Retries reuse those item sequences; acknowledging a
+prefix does not discard later queued changes. Inside the encrypted
+JSON array the first entry is metadata:
+
+```json
+{"_VauchiDeviceSyncOrder": {"version": 1, "sender": [0], "recipient": [0], "sequences": [1, 2]}}
+```
+
+The example abbreviates each device id; actual ids contain exactly
+32 bytes. `sequences` has one slot per following raw array entry;
+legacy pending entries may have `null`. Present sequences MUST be
+positive and strictly increasing within the batch. The receiver MUST
+validate metadata position, uniqueness, version, count and both device
+ids. Malformed metadata MUST NOT be treated as a legacy batch. Unknown
+items are skipped only after pairing raw positions with sequences.
+
+The receiver retains a sequence floor per origin device and conflict
+key, rather than a global origin floor that would discard a late
+update to an independent field. Replays at or below that floor are
+skipped. A later sequence from the same origin can replace its earlier
+state within a second; other origins retain timestamp/device-id LWW.
+The floor map is bounded to 10 000 keys per origin without eviction;
+new keys fail at capacity. Actual application and ordering persistence
+must commit together so a storage failure remains retryable.
+
+Released tolerant readers skip the unknown metadata entry and apply
+the known body items, so they do not gain the new replay protection.
+Updated readers accept legacy arrays, but an unsequenced item cannot
+replace a key with an ordered floor from that origin. Mixed-version
+peers therefore have limited ordering guarantees. Source clocks,
+backup restoration and concurrent stale cached handles require their
+own analysis; sequences alone do not prove universal convergence or
+freshness under arbitrary clock changes and withheld messages.
+
+**E4. Duress.** Under a duress unlock every item is replaced by a cover
 item of the same length and timestamp (Keys and Cards, F3).
 
 ---
@@ -362,13 +415,13 @@ item of the same length and timestamp (Keys and Cards, F3).
   claim [S2](../claims.md):
   `update_comes_from_the_sender_for_this_recipient` (falsified
   without the recipient key in the signature),
-  `each_update_is_applied_once`, and `no_rollback`, which the model
-  proves only in its control (without the floor it is falsified; with
-  the floor Tamarin reaches no verdict), so the floor's correctness
-  rests on the code and `StaleVersion` tests. A leaked identity key
-  defeats all three, as the lemmas state. The floor is per sender
-  device, so a stale delta from one device cannot be used to roll back
-  what another device sent.
+  `each_update_is_applied_once`, and `no_rollback`. Without the version
+  floor, `no_rollback` is falsified; with it, Tamarin reaches no verdict.
+  This is not a formal proof of the current ordering map. Per-device
+  version floors alone did not stop sibling-device rollback; C3 adds
+  per-key signed ordering and tombstones, tested on both receive paths.
+  Its clock, upgrade, capacity and backup limits still apply. A leaked
+  identity key defeats sender authentication.
 - **Sizes are padded**, claim [S5](../claims.md), partial: the buckets
   of B6 and the Kani harness
   `unpad_never_panics_and_only_accepts_a_prefixed_plaintext`; the

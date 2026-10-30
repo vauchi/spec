@@ -29,6 +29,20 @@ Each spec tag maps to the Core commit it was extracted from.
 
   New defects: vauchi/private#927, #928, #929 and #930. S16's statement
   names the attacker its lemma keeps the key from.
+- Protocol audit corrections: BLE commitments do not provide fair
+  exchange; device linking and sync bootstrap fresh pairwise ratchets
+  rather than copying live states. Mailbox tokens also authorize
+  destructive acknowledgement, and purge signatures do not prove
+  mailbox ownership.
+- Pending coordinated fixes: card payload identities are bound to the
+  authenticated BLE/NFC peer; relay exchange compares the complete
+  HMAC fingerprint, with incompatible legacy comparison strings; mailbox
+  admission and fetch pages fit their exact serialized delivery limits,
+  retaining and reporting oversized legacy rows. Signed per-field clocks
+  and persistent removal tombstones prevent sibling-device rollback;
+  owner-device sequences preserve replay ordering across retries and
+  reloads, with data and ordering writes committed together.
+
 - Related Work: the Signal protocols and sealed sender, Pond, Briar's BQP,
   Magic Wormhole, Delta Chat's SecureJoin, SimpleX, Session, the PGP web
   of trust, Zooko's triangle and petnames, Plaxo, local-first software and

@@ -15,7 +15,8 @@ Two people who are not in the same place exchange contact cards and
 end up with a shared key for updates, using the relay only as a store
 that cannot read what passes through it. The link exchange works for a
 recipient who does not have the app yet; the short-code exchange needs
-the app on both sides and gives both a six-digit comparison code.
+the app on both sides and gives both a full authentication fingerprint
+to compare. Its separate six-digit code is only for rendezvous.
 
 ## Actors
 
@@ -294,7 +295,7 @@ Initiator                    Relay                        Responder
   | 4 POST /v2/exchange/complete |                             |
   |   code -> responder's payload|                             |
   |<-----------------------------|                             |
-  | 5 both show SAS "ddd-ddd"; the two people compare it aloud |
+  | 5 both show the full authentication fingerprint; compare  |
 ```
 
 ### Normative operations
@@ -339,17 +340,20 @@ contact, creates the contact, seeds the ratchet as responder with its
 fresh key, and MUST zeroize the offer's private key afterwards: the
 offer is single-use on the client too.
 
-**B4. Short authentication string** (`derive_sas`). Both sides compute
+**B4. Authentication fingerprint** (`derive_sas`). Both sides compute
 
 ```text
 tag = HMAC-SHA256(key = shared,
                   "vauchi-relay-exchange-sas-v1" || min(id_i, id_r) || max(id_i, id_r))
-SAS = (u32_be(tag[0..4]) mod 1_000_000) rendered as "ddd-ddd"
+fingerprint = all 32 tag bytes, lowercase hex, eight groups of eight
+              hex characters separated by hyphens
 ```
 
 with the two identity keys in byte order, so both sides get the same
-string. The SAS is shown to both people; the protocol does not wait
-for a confirmation.
+string. The complete fingerprint is shown to both people; the protocol
+does not wait for a confirmation. Old six-digit comparison strings
+are incompatible and MUST NOT be accepted as a matching fingerprint.
+The HMAC domain and key agreement are unchanged.
 
 **B5. Transport.** Every call goes through Oblivious HTTP: the
 payloads are public, but two addresses coordinating on one code would
@@ -371,10 +375,14 @@ done at claim time.
 
 ### Security considerations
 
-- The SAS binds the shared secret and both identity keys, so a
-  man-in-the-middle who substituted a key during claim or complete
-  produces two different strings. The people have to compare them; a
-  skipped comparison is the same trust as a link exchange.
+- The full fingerprint binds the shared secret and both identity keys.
+  The people must compare every group over an authenticated independent
+  channel; a skipped or partial comparison does not establish the
+  intended peer. The former six-digit truncation allowed adaptive
+  searches for collisions across two substituted transcripts; it was
+  not a PAKE or a commit-before-reveal protocol. Keeping the complete
+  HMAC removes that short-output search. This does not add explicit
+  approval before contacts are persisted.
 - The six-digit code is a rendezvous, not a secret: anyone who learns
   it within the TTL and before the responder can claim the offer. The
   single-use rule means the real responder then fails with

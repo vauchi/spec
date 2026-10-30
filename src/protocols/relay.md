@@ -89,16 +89,26 @@ means unlimited). It stores `(uuid, recipient_id, bytes, created_at,
 hop_count = 0, origin_hint)` and answers `{ status: "ok", blob_id }`.
 The relay does not check the ciphertext's shape; what it stores is
 whatever the client sent, and the sender's address is not part of the
-record. The rate limiter is a token bucket per key, 60 per minute by
+record. Before storing, the relay also requires the exact serialized
+single-blob fetch response plus its four-byte padding prefix to fit
+the 96 KiB fetch bucket; JSON escaping of `origin_hint` counts toward
+this limit. A body that fits send can still be refused at this check.
+The rate limiter is a token bucket per key, 60 per minute by
 default, with a bounded number of tracked keys.
 
 **A3. Fetch** (`handle_fetch_logic`). Body `{ mailbox_tokens: [1 to
 100 tokens] }`. The relay returns, oldest first, every stored blob
 whose `recipient_id` is one of the tokens and whose age is below the
 TTL, as `{ blob_id, ciphertext, created_at, mailbox_token,
-origin_hint }`, until the page would exceed 96 KiB minus 512 bytes;
-then it sets `truncated: true` and the client re-fetches after
-acknowledging. Fetching does not remove anything (`peek_many`); an
+origin_hint }`. Pagination measures the exact serialized JSON page
+plus its four-byte padding prefix against 96 KiB; `truncated: true`
+means another deliverable blob remains after the client acknowledges.
+Legacy rows too large for a fetch are retained and skipped rather than
+blocking healthy rows. An additive `undeliverable` object reports their
+`count`, `details_truncated` and at most two entries containing
+`blob_id`, `mailbox_token` and `reason: "exceeds_fetch_delivery_limit"`.
+Diagnostics are deferred if a full healthy page leaves no room. They
+alone do not set `truncated`, and fetch never silently deletes them. Fetching does not remove anything (`peek_many`); an
 expired blob is never served even before the hourly sweep removes it
 (`fetch_enforces_retention_before_cleanup_over_http_and_ohttp`). The
 rate limit key is the first token. Nothing authenticates a fetch: the
@@ -106,7 +116,12 @@ token is the capability.
 
 **A4. Ack** (`handle_ack_logic`). Body `{ recipient_id, blob_id }`.
 Deletes that one blob from that mailbox and answers whether it existed.
-A duplicate acknowledgement is harmless.
+A duplicate acknowledgement is harmless. There is no signature or
+sender authentication: possession of the mailbox token and blob id is
+a destructive bearer capability. Fetch discloses both, so anyone who
+can fetch a mailbox can also acknowledge its blobs without decrypting
+them. A sender knows the destination token and may obtain blob ids by
+fetching it; knowledge of a token is not exclusive to the recipient.
 
 **A5. Register** (`handle_register_logic`). Body `{ mailbox_tokens }`,
 at most 1 900 tokens of 64 hex characters each. Under the HTTP
@@ -123,13 +138,18 @@ peer keeps its original age. Tests:
 **A7. Purge** (`handle_purge_logic`). Body `{ recipient_id,
 public_key, purge_token(32), signature, timestamp,
 erase_guardian_set }`. The relay MUST verify the Ed25519 signature by
-`public_key` over `recipient_id || purge_token || timestamp [||
+`public_key` over `public_key || purge_token || timestamp_be [||
 "erase-guardian-set"]`, refuse a timestamp more than 60 s from its
 clock and a replayed nonce, and only then delete every blob of the
 mailbox, its forwarding hints, the recovery proofs owned by that key
 and, when asked, the guardian set keyed by `SHA-256(public_key ||
-"guardians")`. This is the one route where an identity key reaches
-the relay, by design: deletion is the identity's own signed act
+"guardians")`. The signature authenticates the supplied identity,
+not its authority over `recipient_id`: the mailbox target is not
+in the signed bytes and no identity-to-token ownership proof is checked.
+Mailbox deletion therefore depends on possession of its bearer token;
+identity-bound cleanup is limited to that signer's recovery proofs and
+guardian set. This route deliberately exposes an identity key to the
+relay for that cleanup
 (Keys and Cards, C3; the hard-shred lane
 `hard_shred_after_grace_fanout_over_outer_hop_only`).
 

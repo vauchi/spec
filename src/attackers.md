@@ -91,8 +91,9 @@ range; may run a sniffer at NFC range.
   within the 7-day deposit and the sender's 300-second wait becomes
   the sender's contact; no approval, no code (S9, partial).
 - **A short code**: whoever claims it first within its TTL takes the
-  offer; the real responder then fails visibly; the SAS shows a
-  substitution only if the two people compare it.
+  offer; the real responder then fails visibly; the complete
+  authentication fingerprint reveals a substitution only when both
+  people compare every group over an authenticated independent channel.
 - **A device-link QR**: the link key. Against an honest relay the
   user's new device shows a different code and the host does not
   release the seed; against a relay the attacker can read, the seed

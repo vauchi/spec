@@ -412,7 +412,8 @@ state `KeyOfferSent`; `now - t_S ≤ 60` on its own offer timestamp
 key; `now - t_D ≤ 60`; `c_D == SHA-256(received ciphertext)`
 (`BleCommitmentMismatch`). Then it derives `SK`, decrypts the card
 with AAD `id_D || id_S || t_D` (`BleDecryptionFailed`), checks the
-payload's CRC16, encrypts its own card with AAD `id_S || id_D || t_S`,
+payload's CRC16 and requires its identity key to equal `id_D`
+(`IdentityMismatch`), then encrypts its own card with AAD `id_S || id_D || t_S`,
 and sends `c_S = SHA-256(ciphertext)` on `CHAR_HANDSHAKE_WRITE` and the
 ciphertext on `CHAR_DATA_WRITE` (`…96`).
 
@@ -421,24 +422,31 @@ ciphertext on `CHAR_DATA_WRITE` (`…96`).
 received ciphertext before anything else, stores the ciphertext, and
 replies with its own commitment `c_D` as the reveal on
 `CHAR_HANDSHAKE_NOTIFY`. It then decrypts the initiator's card with
-AAD `id_S || id_D || t_S`, the offer timestamp it kept in B5, and
-completes.
+AAD `id_S || id_D || t_S`, the offer timestamp it kept in B5, checks
+the CRC16 and requires the embedded identity to equal `id_S` before
+completion (`IdentityMismatch`).
 
 **B9. Initiator on the reveal** (`complete_exchange`). The 32-byte
 reveal MUST equal the commitment received in the KeyAck; the
 initiator then completes with the card it decrypted in B7.
 
-**B10. Commitments.** Each side commits to its encrypted card before
-it can see the other's plaintext: the responder commits in the KeyAck
-before the initiator has sent anything encrypted; the initiator
-commits before the responder decrypts. Neither side can choose its
-card after reading the other's. The commitment is a plain SHA-256 of
-the ciphertext, whose randomness comes from the AEAD nonce.
+**B10. Commitments.** The responder commits in the KeyAck, then the
+initiator decrypts that card in B7 before sending its own commitment.
+The initiator can therefore read the responder's card and stop, or
+choose its own card after reading it. This is not fair exchange. The
+responder decrypts only after receiving the initiator's commitment;
+the final reveal repeats `c_D`, not a withheld decryption key. Each
+commitment is a plain SHA-256 of ciphertext, whose randomness comes
+from the AEAD nonce.
 
 **B11. Card payload** (`BleCardPayload`). The plaintext is a postcard
 encoding of identity key, display name, exchange key, the card's
 fields as label and value pairs, an optional avatar and a CRC16 over
 the content. The CRC is a sanity check; integrity comes from the AEAD.
+The embedded identity MUST match the authenticated handshake identity.
+The payload exchange key is the peer's key for the future update
+channel; supported legacy sessions may use a different handshake
+exchange key, so BLE does not require those two keys to be equal.
 On completion the receiver rebuilds a `ContactCard`, dropping a field
 or an avatar that fails validation (the avatar goes through the same
 WebP normalisation as a local one, ADR-042) rather than the contact.
@@ -604,7 +612,9 @@ plaintext is an `NfcCardPayload`: identity key, display name, exchange
 key and a CRC16. AAD is `sender_id || receiver_id || xid`, so a card
 decrypts only for the pair and tap it was made for. An AEAD failure is
 `NfcDecryptionFailed`, a CRC failure after a successful decryption
-`NfcCrcMismatch`. NFC carries keys and a name; the full card arrives
+`NfcCrcMismatch`. After those checks the embedded identity and exchange
+key MUST match the signed NFC offer or ack (`IdentityMismatch`,
+`ExchangeKeyMismatch`). NFC carries keys and a name; the full card arrives
 with the first synced update, as in A7.
 
 **C5. Trust.** An NFC exchange records proximity `High` and the

@@ -77,8 +77,8 @@ section B) looks similar and is not the same mechanism.
 - **Different, and weaker.** Vauchi's six-digit code is a rendezvous,
   not a secret: the relay sees both payloads and the code, and
   protection against a substituted key rests on the two people
-  comparing a six-digit SAS aloud (B4). A skipped comparison is no
-  better than a link exchange. Wormhole's design needs no comparison
+  comparing the full authentication fingerprint (B4). A skipped
+  comparison is no better than a link exchange. Wormhole's design needs no comparison
   step, because the code itself authenticates.
 - **Different purpose.** The result is a lasting contact with a
   ratchet, not a one-time channel.

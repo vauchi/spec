@@ -396,9 +396,11 @@ old (`validate_proximity_proof`, constant-time compare;
 
 **E4. Response** (`DeviceLinkResponse`). The master seed, display
 name, the index the host assigned (A4's next index), the updated
-signed registry and a JSON sync payload (contacts, own card, ratchet
-states and the rest of the owner's state), encrypted under the link
-key. A refusal (`Declined`, `ConfirmationTimedOut`, `DeviceNameTaken`,
+signed registry and a JSON sync payload (contacts, own card, shared
+contact keys, peer device registries and other owner state), encrypted
+under the link key. Live ratchet states are not copied for concurrent
+operation: the joining device bootstraps fresh pairwise sessions from
+the transferred registries. A refusal (`Declined`, `ConfirmationTimedOut`, `DeviceNameTaken`,
 `Cancelled`) travels on the same return channel under a separate key
 `HKDF(lk, "vauchi-device-link-refusal-v1")`, so it can never decrypt
 as a response.
