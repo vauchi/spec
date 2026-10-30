@@ -252,14 +252,17 @@ random tokens and shuffled (`padded_registration_batches`,
 at most 100 tokens (`MAX_FETCH_TOKENS`); a request never spans two
 lists (`fetch_chunks`, core!2060).
 
-The padding MUST hide the number of contacts and which tokens recur,
-and does not (vauchi/private#946). It is drawn fresh on every sync
-while the real tokens recur, so two fetches of one day's list
-intersect in exactly the real tokens: across cycles the relay learns
-the client's real token set and with it the number of contacts.
-Keeping day epochs apart does not unlink days either: day D's tokens
-are fetched again on D+1 as yesterday's, so the relay can link those
-two requests.
+The padding MUST hide the number of contacts and which tokens recur.
+On Core `a9a911b0a` it did not: it was drawn fresh on every sync while
+the real tokens recurred, so two fetches of one day's list intersected
+in exactly the real tokens and the relay learned the client's real
+token set and contact count (vauchi/private#946). Padding tokens now
+derive from the identity's master seed, the day epoch and an index
+(`Vauchi_MailboxPadding_v1`, core `issue/946`), so every registration
+of a day presents one set and the padding rotates with the day; only
+the order is shuffled. Keeping day epochs apart still does not unlink
+days: day D's tokens are fetched again on D+1 as yesterday's, so the
+relay can link those two requests.
 
 **C2. Fetching.** `POST /v2/fetch` returns blobs for the registered
 tokens, paged; the client acknowledges each blob it has processed, by

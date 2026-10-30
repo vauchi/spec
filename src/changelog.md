@@ -7,6 +7,10 @@ Each spec tag maps to the Core commit it was extracted from.
 
 ## Unreleased
 
+- Card Update and Sync D: fetch padding is deterministic per identity and
+  day (vauchi/private#946 part 1, core `issue/946`); the chapter states
+  the former defect and what remains, the yesterday-token link between
+  consecutive days.
 - Social Recovery B3: the relay keeps one proof per owner under a key
   hash (at most four), binds a slot to the proof's `new_pk`, refuses
   unsigned uploads, takes the rate bucket lowercase and keeps proofs
