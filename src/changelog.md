@@ -7,7 +7,9 @@ Each spec tag maps to the Core commit it was extracted from.
 
 ## Unreleased
 
-- Related Work: Briar's BQP, Magic Wormhole, SimpleX, Session, Plaxo and
+- Related Work: the Signal protocols and sealed sender, Pond, Briar's BQP,
+  Magic Wormhole, Delta Chat's SecureJoin, SimpleX, Session, the PGP web
+  of trust, Zooko's triangle and petnames, Plaxo, local-first software and
   social-recovery wallets, each with what Vauchi shares, where it differs
   and where it is weaker; the short-code exchange is named as weaker than
   Wormhole's PAKE (vauchi/private#119).
