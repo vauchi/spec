@@ -4,7 +4,8 @@
 # Link and Relay-Mediated Exchange
 
 > **Status: extracted 2026-10-28** from `vauchi/core` `68d7626c6` and
-> `vauchi/relay` `525334985`. Two protocols share this chapter because
+> `vauchi/relay` `525334985`; checked against `vauchi/core`
+> `a9a911b0a` and `vauchi/relay` `f3034bb` on 2026-10-30. Two protocols share this chapter because
 > they share the goal and the relay: the **link exchange** (section A)
 > and the **relay-mediated exchange with a short code** (section B).
 > Claims backed: [S9](../claims.md).
@@ -44,7 +45,7 @@ Initiator                        Relay                         Responder
   |-------------------------------->|                               |
   |  2 share link (any channel):    https://vauchi.app/x#pk=..&n=..[&nm=..]
   |  3 poll COUNT(handshake gate)   |  4 PUT epk                    |
-  |  every 30 s                     |  gate=H(n||"handshake")       |
+  |  once per advance               |  gate=H(n||"handshake")       |
   |                                 |  slot=H(n||"epk")  blob=pk_r  |
   |                                 |<------------------------------|
   |                                 |  5 PUT card                   |
@@ -53,11 +54,11 @@ Initiator                        Relay                         Responder
   |                                 |<------------------------------|
   |  6 GET(handshake, presence)     |                               |
   |  -> pk_r                        |                               |
-  |<--------------------------------|  7 poll COUNT(G) every 30 s   |
+  |<--------------------------------|  7 poll COUNT(G) per advance  |
   |  8 PUT card gate=G slot=S_i     |                               |
   |  blob=Enc(K_card, payload_i)    |                               |
   |-------------------------------->|                               |
-  |  9 poll COUNT(G) every 1 s      |                               |
+  |  9 poll COUNT(G) per advance    |                               |
   | 10 GET(G, S_i) -> payload_r     | 11 GET(G, S_r) -> payload_i   |
   |<--------------------------------|------------------------------>|
 ```
@@ -98,14 +99,18 @@ presence_slot  = SHA-256(n || "initiator_presence")
 epk_slot       = SHA-256(n || "epk")
 ```
 
-They depend on the nonce only, so the relay cannot link the handshake
-gate to the escrow gate below, which depends on the shared secret.
+They depend on the nonce only, so their hashes do not link the
+handshake gate to the escrow gate below, which depends on the shared
+secret. Timing does link them (see Security considerations).
 
-**A3. Presence deposit.** Before the link is shared, the initiator
-MUST deposit `pk_i` in `(handshake_gate, presence_slot)` with the
-default TTL of 604 800 s (7 days). This creates the gate's first slot;
-the relay only serves a gate that holds two slots (A6), so without the
-presence deposit the initiator could never read the responder's key.
+**A3. Presence deposit.** The initiator MUST deposit `pk_i` in
+`(handshake_gate, presence_slot)` with the default TTL of 604 800 s
+(7 days). It does so on the first `advance` of the exchange, after the
+app already shows the link (`app_engine/link_exchange.rs`); either
+side's deposit creates the gate, so a responder who is faster still
+fills it. The relay only serves a gate that holds two slots (A6), so
+without the presence deposit the initiator could never read the
+responder's key.
 
 **A4. Responder key agreement** (`responder_respond_with_card_bytes`).
 The responder MUST generate a fresh ephemeral X25519 key pair, compute
@@ -136,13 +141,15 @@ gate full the card is normally already waiting (A8).
 PUT MUST be refused when the blob exceeds 65 536 bytes decoded
 (`BlobTooLarge`), when `ttl_seconds` exceeds 604 800 (also reported
 as `BlobTooLarge`), when the slot already exists in a live gate
-(`AlreadyExists`), when the gate already has two slots (`GateFull`),
-or when the relay holds 10 000 live gates. A GET MUST answer
-`NotReady{count}` while the gate has fewer than two slots, `NotFound`
-for an expired or unknown gate or for a requester whose own slot is
-not in the gate, and otherwise the blob of the *other* slot. The slot
-hash is the only authentication: knowing a gate hash alone retrieves
-nothing. Expired gates are swept every 60 s.
+(`AlreadyExists`), when the gate already has two slots, or when a new
+gate would exceed 10 000 gates; both are reported as `GateFull`, and
+the cap counts expired gates the sweep has not yet removed. A GET MUST
+answer `NotFound` for an expired or unknown gate, `NotReady{count}`
+while the gate has fewer than two slots (before the requester's slot
+is checked), `NotFound` for a requester whose own slot is not in the
+full gate, and otherwise the blob of the *other* slot. The slot hash
+is the only authentication: knowing a gate hash alone retrieves no
+blob. Expired gates are swept every 60 s.
 
 **A7. Initiator key agreement** (`LinkInitiatorSession`). When the
 handshake gate reports two slots, the initiator retrieves the
@@ -194,12 +201,16 @@ through `bootstrap_exchange_ratchet` with the two fresh X3DH keys: the
 side with the smaller identity key is the ratchet initiator.
 
 **A11. Deadlines.** Each side's session fails with `PollingTimedOut`
-300 s after it started (`LINK_EXCHANGE_DEADLINE_SECS`), while the
-deposits stay on the relay for up to 7 days. A link opened later than
-five minutes after the sender stopped waiting cannot complete; the
-sender has to start a new exchange. Poll cadence: 30 s on the
-handshake gate and on the responder's escrow poll, 1 s on the
-initiator's escrow poll once its card is deposited.
+300 s after it was created (`LINK_EXCHANGE_DEADLINE_SECS`); the app
+drops the sender's session earlier when the sender leaves the link
+screen. The deposits stay on the relay for up to 7 days, but a link
+opened after the sender's session ended cannot complete; the sender
+has to start a new exchange. The machines attach
+`suggested_interval_ms` hints to their checks (30 s on the handshake
+gate and the responder's escrow gate, 1 s on the initiator's escrow
+gate once its card is deposited), but Core does not use them: it
+polls the watched gate once per `advance`, as often as the caller
+advances.
 
 ### State machine
 
@@ -207,19 +218,25 @@ Initiator (`LinkInitiatorState`): `Polling` → (`LinkOpened`, keys
 derived, card deposited) → `Retrieving` → (`RelayEscrowBlobReceived`,
 decrypted) → `Finalized{card_bytes}`. Any state → `Failed(reason)`
 with `PollingTimedOut`, `HandshakeFailed` (bad length or
-non-contributory key), `DecryptError`, `DepositRejected`
-(`RelayEscrowFailed` for one of its gates) or `Cancelled`. Terminal
+non-contributory key), `DecryptError`, `DepositRejected` (any
+`RelayEscrowFailed`, whatever its gate) or `Cancelled`. Terminal
 states ignore every further event.
 
 Responder (`LinkResponderState`): `Polling` → (`RelayEscrowReady` on
 `G`) → `Retrieving` → `Finalized{card_bytes}`; failures
 `PollingTimedOut`, `DecryptError`, `DepositRejected`, `Cancelled`.
-`DepositRejected` on the responder is most often the same person
-opening a link they already accepted: the `epk` slot exists.
+`DepositRejected` on the responder means the relay refused a request
+on gate `G`: a card over the blob limit, or the relay at capacity. A
+re-open of a link, or an open after someone else, is not reported:
+the `epk` deposit returns `AlreadyExists`, which the client counts as
+stored (`network/escrow_client.rs`), and the session ends
+`PollingTimedOut` on an escrow gate the initiator never joins (defect
+vauchi/private#942).
 
-Both sessions ignore events for gates they do not own, and persist
-nothing of the escrow beyond the session: the only durable result is
-the contact created in A10.
+Both sessions ignore ready and blob events for gates they do not own;
+only the responder also filters `RelayEscrowFailed` to its gate. Both
+persist nothing of the escrow beyond the session: the only durable
+result is the contact created in A10.
 
 ### Failure cases
 
@@ -228,10 +245,13 @@ the contact created in A10.
   does not decode or carries control, invisible or direction-changing
   characters, never the link.
 - Small-order peer key: `NonContributoryDh`, terminal.
-- Relay refusals (`BlobTooLarge`, `GateFull`, `AlreadyExists`,
-  capacity): `DepositRejected`, terminal.
-- Gate expired before both slots were filled: `NotFound` on the
-  relay, the session times out.
+- Relay answers `BlobTooLarge`, `GateFull` (including capacity) and
+  `NotFound`, and a blob that is not valid base64: `DepositRejected`,
+  terminal (on the responder only for gate `G`). `AlreadyExists`
+  counts as a successful deposit.
+- Unknown or expired gate: the relay answers `NotFound`, which ends
+  the session `DepositRejected`. With a 7-day TTL against a 300 s
+  session this happens only when the relay loses its in-memory store.
 - Signature failure or wrong version on the payload: completion
   fails; no contact is created.
 - Self-exchange: refused before any write.
@@ -247,23 +267,34 @@ the contact created in A10.
   holds only when the proof binds the opener's identity as well as
   its key. Sender approval and an out-of-band code are open work
   (vauchi/private#727). This is claim [S9](../claims.md): a remote
-  exchange over a link is weaker, and the app says so.
+  exchange over a link is weaker. Core marks a link contact with
+  transport `Link` and proximity `Unknown`, but no UI copy warns that
+  the first opener wins, and `faq.add_contact.answer` says Vauchi
+  never exchanges contacts remotely.
 - **What the relay sees.** Gate and slot hashes, blob sizes, timing,
-  and two deposits per gate. The handshake gate and the escrow gate
-  are not linkable by the relay, since one depends on the nonce and the
-  other on the shared secret. The relay never sees a key or a card.
-- **What the card payload binds.** The identity signature covers the
-  fresh X3DH key and the relay URL, so a relay cannot substitute a key
-  or a routing address inside a payload it cannot open; and the
-  shared key depends on both fresh X3DH keys, so a later compromise of
-  either identity key does not reveal it.
+  two deposits per gate, and both ephemeral public keys `pk_i` and
+  `pk_r` (the handshake blobs). The hashes do not link the handshake
+  gate to the escrow gate, since one depends on the nonce and the
+  other on the shared secret, but timing does: the responder's `epk`
+  and card deposits go back to back, and the initiator's GET of
+  `pk_r`, PUT of its card and COUNT of `G` happen in one advance. The
+  relay never sees a private key, the shared secret or a card.
+- **What the card payload binds.** The identity signature covers
+  `"vauchi-link-bootstrap-v2" || x3dh_pubkey || relay_url` only: not
+  the card and not this exchange. A payload whose card is rewritten
+  still verifies (defect vauchi/private#942). The relay cannot open a
+  payload, so it cannot substitute the X3DH key or the routing address
+  inside one; and the shared key depends on both fresh X3DH keys, so a
+  later compromise of either identity key does not reveal it.
 - **What is not bound.** The escrow shared secret `ss` authenticates
   nobody: it comes from two ephemeral keys and only gates the escrow.
   Authentication rests entirely on the signed payload, which is why a
   payload with a bad signature is a terminal failure.
-- **Sender name.** `nm` is unauthenticated and filtered for text that
-  reads differently from what it is; a shell MUST present it as a
-  claim.
+- **Sender name.** `nm` is unauthenticated. The filter rejects only C0
+  and C1 controls, bidi controls and a few invisible characters
+  (U+00AD, U+061C, U+200B–U+200F, U+2060–U+2069, U+FEFF); confusables,
+  U+2028, U+2029, U+3164, U+115F and U+180E pass. A shell MUST present
+  the name as a claim.
 
 ### Vectors
 
@@ -281,37 +312,44 @@ key of A10 from both sides.
 
 ```text
 Initiator                    Relay                        Responder
-  | 1 POST /v2/exchange/offer    |                             |
+  | 1 OHTTP exchange_offer       |                             |
   |   {identity_key, exchange_key, display_name}               |
   |----------------------------->|                             |
   | <- code (6 digits)           |                             |
   | 2 tell the code (voice, in person)                         |
-  |                              | 3 POST /v2/exchange/claim   |
+  |                              | 3 OHTTP exchange_claim      |
   |                              |   code + {identity_key,     |
   |                              |    exchange_key, ephemeral, |
   |                              |    display_name}            |
   |                              |<----------------------------|
   |                              | -> initiator's offer        |
-  | 4 POST /v2/exchange/complete |                             |
+  | 4 OHTTP exchange_complete    |                             |
   |   code -> responder's payload|                             |
   |<-----------------------------|                             |
   | 5 both show the full authentication fingerprint; compare  |
 ```
 
+Every arrow is an action posted to `/v2/ohttp` (B5).
+
 ### Normative operations
 
 Source: `vauchi-core/src/api/vauchi/exchange_relay.rs`,
 `exchange/relay_exchange.rs`, `exchange/x3dh.rs`,
-`relay/src/exchange_broker.rs`, `relay/src/http_api.rs`.
+`relay/src/exchange_broker.rs`, `relay/src/http_api.rs`. No shell
+calls this flow today: `start_relay_exchange`, `claim_relay_exchange`
+and `complete_relay_exchange` have callers only in Core's tests.
 
 **B1. Offer** (`start_relay_exchange`). The initiator MUST generate a
 fresh X25519 key pair and post, as base64 JSON, its identity key, that
 exchange key and its display name. The payload is not encrypted: it
 holds the same public data a QR exchange shows. The relay MUST issue a
 6-digit code drawn from a space of 1 000 000, MUST refuse a payload
-over 65 536 bytes, MUST bound the TTL to 30–3600 s (default set by
-the relay), and MUST refuse new offers at its configured capacity,
-which is capped at 500 000, half the code space.
+over 65 536 bytes, MUST bound a requested TTL to 30–3600 s, and MUST
+refuse new offers at its configured capacity. The defaults, a TTL of
+300 s (`RELAY_EXCHANGE_DEFAULT_TTL_SECS`) and a capacity of 10 000
+(`RELAY_EXCHANGE_MAX_OFFERS`), are not range-checked, except that a
+capacity over 500 000, half the code space, stops the relay at start
+(`ExchangeBroker::new`).
 
 **B2. Claim** (`claim_relay_exchange`). The responder posts the code
 with its identity key, its long-term exchange key, a fresh ephemeral
@@ -330,7 +368,11 @@ shared = HKDF(salt = none, ikm = DH1 || DH2, "vauchi-x3dh-key-v2")
 rejecting a non-contributory output of either. It MUST refuse the
 exchange when a contact with the offer's identity already exists, then
 creates the contact and seeds the Double Ratchet as initiator with the
-offer's exchange key.
+offer's exchange key. The relay marks the offer claimed and stores the
+response before the client runs any of these checks, so a responder
+that then refuses (existing contact, non-contributory key, malformed
+offer) leaves the initiator to complete one-sided: its `complete`
+returns the stored response and it creates the contact.
 
 **B3. Complete** (`complete_relay_exchange`). The initiator polls
 `complete` with the code; `None` until the claim lands. It computes
@@ -355,9 +397,15 @@ does not wait for a confirmation. Old six-digit comparison strings
 are incompatible and MUST NOT be accepted as a matching fingerprint.
 The HMAC domain and key agreement are unchanged.
 
-**B5. Transport.** Every call goes through Oblivious HTTP: the
-payloads are public, but two addresses coordinating on one code would
-tell the relay who met whom (ADR-037).
+**B5. Transport.** Every call is an action (`exchange_offer`,
+`exchange_claim`, `exchange_complete`) posted through Oblivious HTTP
+to `/v2/ohttp`: the payloads are public, but two addresses
+coordinating on one code would tell the relay who met whom (ADR-037).
+When OHTTP is not configured and direct connections are allowed, the
+client falls back to posting `/v2/<action>`, such as
+`/v2/exchange_offer`, but the relay's direct routes are
+`/v2/exchange/offer`, `/v2/exchange/claim` and `/v2/exchange/complete`
+(`http_api.rs`), so the fallback matches no route.
 
 ### State machine
 
@@ -385,8 +433,9 @@ done at claim time.
   approval before contacts are persisted.
 - The six-digit code is a rendezvous, not a secret: anyone who learns
   it within the TTL and before the responder can claim the offer. The
-  single-use rule means the real responder then fails with
-  `AlreadyClaimed`, which is visible.
+  real responder then fails with `AlreadyClaimed` while the offer
+  waits for `complete`, and with "invalid or expired code", the error
+  for a mistyped code, once the initiator has completed.
 - The relay sees both payloads in the clear (public keys and display
   names) and the code; it does not see the shared secret.
 

@@ -3,7 +3,8 @@
 
 # In-Person Exchange
 
-> **Status: extracted 2026-10-28** from `vauchi/core` `612992b0b`.
+> **Status: extracted 2026-10-28** from `vauchi/core` `612992b0b`;
+> checked against `vauchi/core` `a9a911b0a` on 2026-10-30.
 > Three protocols share this chapter because they share the goal, the
 > session state machine and the reciprocity confirmation that follows:
 > the **mutual QR exchange** (section A), the **Glance exchange**, one
@@ -59,7 +60,7 @@ Alice                                                   Bob
   | 3 scan QR_B  ------------------- (line of sight) -----------------> 4 scan QR_A
   | 5 "they scanned" (a tap on each screen, not a message)
   | 6 K = HKDF(X25519(eph_A, eph_B), "vauchi-x3dh-symmetric-v2" || sorted ids || sorted ephs)
-  | 7 audio: scanner chirps chal_B, listens; displayer listens, chirps chal_A
+  | 7 audio: each side chirps the peer's challenge, then listens
   | 8 contact saved with K; card = the QR's name until the first sync
   | 9 reciprocity confirmation (D)
 ```
@@ -92,7 +93,10 @@ the identity's display name in UTF-8 (at most the card's character
 limit, checked as 4 bytes per character before anything is allocated),
 `flags` bit 0 set when a relay URL follows, bits 1 to 7 reserved. The
 Ed25519 signature by `id` covers everything after the magic and before
-the signature itself, the relay fields included. The QR shows
+the signature itself, the relay fields included, with one exception:
+the signed flags byte is not the one received. `verify_signature`
+rebuilds it from whether a relay URL was parsed, so reserved bits 1 to
+7 are neither signed nor rejected (vauchi/private#949). The QR shows
 `https://vauchi.app/x#q=<base64url, no padding>`; the payload rides in
 the fragment, which a browser never sends to the server. A scanner
 MUST also accept the older raw standard-base64 form, MUST refuse a
@@ -109,7 +113,11 @@ expired (`qr_timestamp_overflow_tests.rs`).
 `DisplayingQr`. It MUST reject an expired QR (`QRExpired`), a bad
 signature (`InvalidSignature`) and a QR carrying its own identity key
 (`SelfExchange`), in that order, and then record the peer's identity
-key, exchange key, audio challenge, display name and relay URL. The
+key, exchange key, audio challenge, display name and relay URL. A
+scanned QR reaches this step only through `from_data_string`, which
+already verifies the signature at parse time, so on the scan path a
+QR that is both expired and badly signed fails `InvalidSignature`
+first. The
 scan of the other side is not observable, so a user signal
 (`TheyScannedOurQR`) moves the session on; the CLI sends it right
 after the scan.
@@ -151,8 +159,12 @@ one side equals `their_token` on the other. Section D uses them.
 **A6. Proximity.** After key agreement the session runs its proximity
 verifier and, when it holds the peer's audio challenge, emits
 `AudioEmitChallenge` (the peer's 16-byte challenge as FSK samples) and
-`AudioListenForResponse` (5 000 ms); the scanner emits first and the
-displayer listens first. The session does not decode audio itself; a
+`AudioListenForResponse` (5 000 ms). The order is meant to differ by
+role, the scanner emitting first and the displayer listening first, but
+`emit_proximity_commands` sets its initiator flag from the same check
+that guards the block, and in a mutual QR both sides hold the peer's
+challenge: both emit first, then listen (vauchi/private#948). The
+session does not decode audio itself; a
 shell reports `ProximityCheckCompleted { confidence }`. Confidence is
 one of `High` (audio or a physical channel), `Medium` (the user
 confirmed by hand; `ManualConfirmationVerifier`), `Low` (a check
@@ -163,7 +175,11 @@ the tap or the cable is the proof.
 `AwaitingCardExchange`. The contact is created with the peer's identity
 key, the card the shell supplies, `K` as the shared key, the proximity
 confidence, the transport and trust metrics `(transport, confidence,
-timestamp)`; the relay URL from the peer's QR is stored as the
+timestamp)`. The contact's `exchange_timestamp` SHOULD be the time of
+the exchange, but `handle_complete_exchange` (and `process_ble_phase4`
+on the old BLE path) passes 0, so a `Pending` contact from the session
+reads as `Unreciprocated` at once (D; vauchi/private#948). The relay
+URL from the peer's QR is stored as the
 contact's relay URL and copied onto each pending update as
 `target_relay_url`, but no shipped path dispatches by it: every send
 goes to the configured relay through the outer hop (Card Update and
@@ -187,7 +203,10 @@ channel.
 **A9. Resumption** (`resume_qr`). A shell whose "start" and "complete"
 are separate processes (the CLI) MUST persist the QR and its ephemeral
 secret in restricted storage and delete both after completion or
-expiry. On resume the pair is checked: valid signature, not expired,
+expiry. The CLI writes them to one file only its owner can read
+(mode 0600) but unencrypted, and deletes it only after completion; an
+expired pending QR stays on disk until the next `exchange start`
+replaces it. On resume the pair is checked: valid signature, not expired,
 identity key is ours, exchange key matches the secret; otherwise the
 resume is refused.
 
@@ -226,9 +245,12 @@ and its ratchet.
   transcript of both QR codes yields no key and a key agreed with the
   wrong identity fails. This is claim [S6](../claims.md):
   `session_key_secrecy` and `no_misbinding` in `qr_exchange.spthy`,
-  tests `test_transcript_binding_includes_identity_keys` and
-  `test_transcript_binding_includes_ephemeral_keys` in
-  `exchange_ceremony_tests.rs`. The tests S6 names in
+  test `test_transcript_binding_includes_identity_keys` in
+  `exchange_ceremony_tests.rs`, which holds the ephemeral key and the
+  peer fixed and so isolates the identity binding.
+  `test_transcript_binding_includes_ephemeral_keys` does not isolate
+  anything: its two sessions differ in identity and in ephemeral key,
+  so the DH already differs. The tests S6 names in
   `exchange_x3dh_tests.rs` exercise the two-DH agreement of
   `x3dh.rs`, which backs the relay-mediated exchange, not this
   derivation.
@@ -352,9 +374,13 @@ after a failed dial. The displayer never dials; it is the responder
 and requires the nonce (`start_ble_handshake_as_responder`). Without a
 QR, both phones advertise and scan, and `decide_ble_role` makes the
 side with the smaller attempt token, compared at the advertised width,
-the initiator; equal prefixes make both dial, and the glare is
-resolved on the identity keys: the side with the larger identity key
-yields to responder and resets its session (`BleHandshakeSession::reset`).
+the initiator; equal prefixes make both sides initiators, and both
+dial. The glare is resolved on the identity keys when an initiator
+that has sent its KeyOffer receives the peer's: the side with the
+larger identity key yields to responder and resets its session
+(`BleHandshakeSession::reset`), but only when the offer arrived on an
+inbound link; an offer on its own outbound link is ignored
+(`ble_handshake_machine.rs`).
 
 **B4. KeyOffer** (`create_key_offer`), 137 bytes:
 
@@ -368,7 +394,9 @@ to `CHAR_HANDSHAKE_WRITE` (`…ef1234567894`).
 
 **B5. Responder on KeyOffer** (`process_key_offer`). The checks run in
 this order, each before any key derivation, with constant-time
-comparisons: state `Idle`; length at least 137 (`InvalidBleFormat`);
+comparisons: state `Idle`; length at least 137 (`InvalidBleFormat`;
+bytes past 137 are accepted and ignored, as are bytes past 153 in the
+KeyAck of B7, vauchi/private#949);
 version 0x04 (`InvalidProtocolVersion`); `id_S` not our own
 (`SelfExchange`); `id_S` equals the pinned identity, if one is pinned
 (`IdentityMismatch`); `x_S` equals the pinned exchange key, if one is
@@ -428,22 +456,32 @@ completion (`IdentityMismatch`).
 
 **B9. Initiator on the reveal** (`complete_exchange`). The 32-byte
 reveal MUST equal the commitment received in the KeyAck; the
-initiator then completes with the card it decrypted in B7.
+initiator then completes with the card it decrypted in B7. The check
+runs only when the reveal is non-empty: `complete_exchange` with an
+empty reveal skips it and completes (vauchi/private#949).
 
-**B10. Commitments.** The responder commits in the KeyAck, then the
-initiator decrypts that card in B7 before sending its own commitment.
-The initiator can therefore read the responder's card and stop, or
-choose its own card after reading it. This is not fair exchange. The
-responder decrypts only after receiving the initiator's commitment;
-the final reveal repeats `c_D`, not a withheld decryption key. Each
-commitment is a plain SHA-256 of ciphertext, whose randomness comes
-from the AEAD nonce.
+**B10. Commitments.** The responder commits to its encrypted card in
+the KeyAck, before the initiator has sent anything encrypted. The
+initiator, however, decrypts the responder's card (B7) before it
+encrypts and commits to its own, and the "reveal" of B8 is only the
+KeyAck commitment the initiator already received in the clear; it
+reveals nothing new. An honest app fixes each side's card when its
+handshake session is created, so it does not choose its card after
+reading the other's; the protocol does not enforce this, and a
+modified initiator can read the responder's card before it commits to
+its own. The commitment is
+a plain SHA-256 of the ciphertext, whose randomness comes from the
+AEAD nonce.
 
 **B11. Card payload** (`BleCardPayload`). The plaintext is a postcard
 encoding of identity key, display name, exchange key, the card's
 fields as label and value pairs, an optional avatar and a CRC16 over
 the content. The CRC is a sanity check; integrity comes from the AEAD.
-The embedded identity MUST match the authenticated handshake identity.
+The embedded identity MUST match the identity received in the handshake.
+The handshake does not prove possession of that identity key. Binding to
+the intended peer requires identity and exchange-key pins obtained out
+of band; without them a peer can claim an existing identity and the
+current persistence path may rekey that contact.
 The payload exchange key is the peer's key for the future update
 channel; supported legacy sessions may use a different handshake
 exchange key, so BLE does not require those two keys to be equal.
@@ -456,8 +494,11 @@ shared key and seeds the Double Ratchet with
 `bootstrap_exchange_ratchet` as in A8, the peer's exchange key taken
 from its card payload (`apply_ble_machine_event`). The older
 `ExchangeSession::new_ble` path in Core instead derives a separate
-relay key `HKDF(X25519(e_ours, x_theirs), "vauchi-ble-relay-key-v1" ||
-sorted ids)` for the contact (`process_ble_phase4`); the two paths
+relay key `HKDF(X25519(s_ours, s_theirs), "vauchi-ble-relay-key-v1" ||
+sorted ids)` for the contact (`process_ble_phase4`), where `s_*` is
+the fresh key pair `new_ble` generates and puts in its card payload as
+the exchange key; the peer's payload key is therefore the peer's
+session key, and the DH is ephemeral to ephemeral. The two paths
 agree with themselves on both sides but not with each other, and only
 the app path is wired to a screen today (vauchi/private#893).
 
@@ -511,16 +552,26 @@ app clears every Glance value when the exchange screen is left.
   photographed QR's prefix on the air; such a twin cannot finish,
   because the handshake pins the displayer's identity and exchange key
   from the QR (`test_pinned_initiator_rejects_key_ack_from_unexpected_identity`,
-  `…_with_wrong_exchange_key` in `ble_handshake_edge_tests.rs`).
+  `…_with_wrong_exchange_key` in `ble_handshake_tests.rs`).
 - **The displayer's assurance is weaker.** The displayer has nothing
   to pin; it requires the nonce echo, which proves the connector read
   the QR (`test_responder_rejects_wrong_oob_nonce_echo`). The echo
   travels in the clear in the KeyOffer, so a radio observer of a
   legitimate offer could race a replay of it; ADR-053 records this and
   requires single-use nonces, which the code does not enforce yet
-  (vauchi/private#892):
-  the displayer accepts any offer with the right echo until the 60-second
-  QR window closes or the exchange completes and the screen is left.
+  (vauchi/private#892). The displayer accepts any offer with the right
+  echo until its exchange screen is left: the app generates the QR and
+  its nonce once per screen entry and clears them on exit, and the only
+  time check is B5's on `t_S`, a timestamp the connector chooses and
+  nobody signs. The QR's 60-second window is enforced only by the
+  scanner (vauchi/private#948).
+- **The displayer does not bind the scanner.** `ble_handshake.spthy`
+  states this as `displayer_binds_the_scanner` and finds it falsified:
+  a party that echoes the nonce is accepted under any identity, and the
+  lemma stays falsified under `-DQR_PRIVATE`, since relaying the
+  scanner's unsigned offer is enough. CI expects both falsifications in
+  the extended set (`ci/formal-verification.sh`), which runs on the
+  scheduled main pipeline.
 - **Unlinkable advertisements.** A token derived from the identity key,
   as before #726, let a bystander recognise a phone across sightings;
   the diff-mode lemma of `ble_advertisement.spthy` shows one device
@@ -533,11 +584,19 @@ app clears every Glance value when the exchange screen is left.
   device in radio range that wins the tiebreak can complete the
   handshake, and the mode's proximity signal is what separates the
   intended peer from an interloper. S8 does not cover them.
-- **Session key.** `SK` mixes a static DH (identity binding) with an
-  ephemeral DH (forward secrecy); nonces of both sides salt it and the
-  version string separates it from every earlier wire version. The AAD
-  ties each ciphertext to sender, receiver and the sender's timestamp,
-  so a card cannot be redirected or replayed into another session.
+- **Session key.** `SK` mixes a static DH with an ephemeral DH
+  (forward secrecy); nonces of both sides salt it and the version
+  string separates it from every earlier wire version. DH1 binds the
+  X3DH exchange keys only. The Ed25519 identity keys never enter the
+  derivation: they appear in the AAD as labels nobody signs. The AAD
+  ties each ciphertext to those labels and the sender's timestamp, so
+  a card cannot be redirected or replayed into another session.
+- **Identity binding.** The card identity is checked against the peer's
+  wire identity before persistence. That prevents a card from changing
+  identity after the handshake. Without out-of-band identity and exchange
+  key pins, the handshake does not prove ownership of the wire identity;
+  an unpinned peer can claim an existing identity and the persistence path
+  can rekey that contact (vauchi/private#941).
 - **Confirmation over the link** is authenticated by `SK` alone (B13):
   whoever holds `SK` can produce the peer's token. On this channel that
   is the two devices, or an attacker who already broke the handshake.
@@ -611,7 +670,8 @@ tap.
 plaintext is an `NfcCardPayload`: identity key, display name, exchange
 key and a CRC16. AAD is `sender_id || receiver_id || xid`, so a card
 decrypts only for the pair and tap it was made for. An AEAD failure is
-`NfcDecryptionFailed`, a CRC failure after a successful decryption
+`NfcDecryptionFailed`, an unparseable payload `SerializationFailed`,
+and a CRC failure after a successful decryption
 `NfcCrcMismatch`. After those checks the embedded identity and exchange
 key MUST match the signed NFC offer or ack (`IdentityMismatch`,
 `ExchangeKeyMismatch`). NFC carries keys and a name; the full card arrives
@@ -626,8 +686,10 @@ relayed (security considerations below).
 ### State machine
 
 `NfcHandshakeState`: `Idle` → reader `KeyOfferSent` → `PayloadSent`
-→ `Complete`; `Idle` → tag `KeyAckReceived` → `Complete`; from any
-of the three middle states `RelayFallback`; `Failed{reason}`.
+→ `Complete`; `Idle` → tag `KeyAckReceived` → `Complete`; from
+`KeyAckReceived` or `PayloadSent` `RelayFallback`; `Failed{reason}`.
+`enter_relay_fallback` also accepts `KeyOfferSent`, but the reader has
+no key there yet, so it fails with `InvalidState`.
 Completed exchange ids are cached per session.
 
 ### Failure cases
@@ -680,7 +742,10 @@ contact shows the result.
 `RelayEscrow` or `RelaySync`; `Unreciprocated` when a `Pending` contact
 is read more than 7 days after its exchange timestamp
 (`Contact::reciprocity`); `Unknown` for contacts from before the
-feature. A `Confirmed` contact is never sent another confirmation.
+feature. A `Confirmed` contact is never sent another `0x03`
+confirmation (D3), but `queue_reciprocity_answer` does not check the
+state, so a `Confirmed` contact still answers a valid `0x03` from a
+waiting peer with a `0x07`.
 
 ### Normative operations
 
@@ -694,7 +759,11 @@ secret only the two sides hold: the raw DH output for the QR session
 (A5), the session key for the BLE handshake (B13), and the contact's
 stored shared key for the relay-sync tier below
 (`Contact::derive_reciprocity_tokens`). Each tier is consistent with
-itself on both sides; the tiers' tokens differ from each other.
+itself on both sides. For a QR exchange the relay-sync tokens differ
+from the escrow tokens (`K` is not `ss`); for the BLE handshake they
+are the same value, since the app stores `SK` as the contact's shared
+key and both compute `HKDF(SK, "vauchi-reciprocity-confirm-v1" ||
+id)`.
 
 **D2. Relay escrow tier** (`ReciprocityConfirmer`, QR and cable
 exchanges). Right after completion each side deposits its raw 32-byte
@@ -702,8 +771,8 @@ exchanges). Right after completion each side deposits its raw 32-byte
 gate every 30 s; when the gate holds two slots it retrieves the other
 slot and compares the blob in constant time with `their_token`. A
 match is `Confirmed` over `RelayEscrow`; any other blob is `Pending`
-with no retry; an escrow failure is retried up to three deposits and
-then `Pending`. The screen stays on "Verifying" until the tier
+with no retry; an escrow failure is retried three times, up to four
+deposits in all (`MAX_DEPOSIT_RETRIES`), and then `Pending`. The screen stays on "Verifying" until the tier
 resolves; both outcomes keep the contact, since the peer's keys are
 already in hand and only the peer's save of ours is unconfirmed. The
 relay sees two 32-byte deposits per gate; the gate is derived from the
@@ -752,7 +821,10 @@ exchange converges.
   This is claim [S7](../claims.md): lemmas
   `confirmed_means_the_peer_confirmed` and
   `a_leaked_shared_key_also_needs_the_identity_key` in
-  `reciprocity.spthy`, falsified under `-DNO_SIGNATURE`.
+  `reciprocity.spthy`. CI expects the second falsified under
+  `-DNO_SIGNATURE`, and the first only under `-DNO_SIGNATURE
+  -DSYMMETRIC_TOKENS`: signature and asymmetric tokens each stop a
+  reflection.
 - **The escrow and link tiers have no signature.** D2 compares a raw
   token and B13 an AEAD under the session key; on those tiers the
   secret they are derived from is the proof, and whoever holds it
@@ -795,6 +867,6 @@ D2. A signed `0x03` payload of D3 is a candidate.
   `orchestrator/ble_handshake_machine.rs`,
   `ui/reciprocity_confirmer.rs`; `vauchi-cli/src/commands/exchange.rs`
 - `vauchi-core/verification/qr_exchange.spthy`, `reciprocity.spthy`,
-  `ble_advertisement.spthy`
+  `ble_advertisement.spthy`, `ble_handshake.spthy`
 - ADR-053 (OOB bootstrap is the authentication root), ADR-007 (domain
   separation), ADR-034 (trust levels)

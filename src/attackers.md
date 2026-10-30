@@ -23,11 +23,14 @@ OHTTP window keys.
   proofs; an identity key on a purge; both public keys and display
   names in a short-code exchange offer; the link exchange's gate and
   slot hashes and two deposits per gate.
-- **Can**: withhold, reorder, replay and delay blobs; chain one
-  fetcher across days through the overlap of its daily token sets and
-  tell its padding from its real tokens (vauchi/private#890);
-  recompute every past token of a channel once it also obtains that
-  channel's shared key.
+- **Can**: withhold, reorder, replay and delay blobs; correlate one
+  fetcher's per-day requests by their timing on the immediate path
+  (requests carry one day's tokens each since core!2060,
+  vauchi/private#890); intersect the token sets of one fetcher's
+  cycles within a day, whose real tokens repeat while the padding is
+  fresh, to tell the two apart (vauchi/private#946); recompute every
+  past token of a channel once it also obtains that channel's shared
+  key.
 - **Cannot** (claims): read a card or an update (S1); forge, replay
   or roll back an update (S2); learn a client's address, against a
   single host (S3, partial while one operator runs both hops); learn
@@ -108,8 +111,9 @@ recovering user.
 - **Can**: read the database if the platform secure storage yields
   the raw storage master key; recover the seed and every key from it;
   brute-force a six-digit duress PIN offline from its Argon2id hash;
-  guess a full backup's password at Argon2id cost, with no strength
-  gate on the full backup today (vauchi/private#891); as the holder
+  guess a backup's password at Argon2id cost, past the strength gate
+  both the full backup and the identity-only export apply
+  (vauchi/private#891); as the holder
   of a recovering user's old device, hold every old shared key.
 - **Cannot**: open the data once the storage master key is destroyed
   (S12, partial on the phones); open a backup without its password
@@ -124,7 +128,9 @@ Watches the unlock and the network, may hold the relay.
 
 - **Gets**: a decoy contact list under the duress PIN, a session copy
   of the card, cover traffic of the right length and timing to every
-  contact and device (S14, partial: the model states no lemma yet).
+  contact and device (S14, partial: the duress model proves the cover
+  indistinguishable on the wire, but leaves lengths, timing and the
+  linked devices to the tests).
 - **Breaks it by**: extracting the ratchet keys from the device, the
   model's stated limit; or imaging the storage, where the duress
   hash is guessable.
