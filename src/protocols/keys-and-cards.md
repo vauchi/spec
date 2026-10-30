@@ -3,7 +3,8 @@
 
 # Keys and Cards
 
-> **Status: extracted 2026-10-28** from `vauchi/core` `612992b0b`.
+> **Status: extracted 2026-10-28** from `vauchi/core` `612992b0b`;
+> checked against `a9a911b0a` on 2026-10-30.
 > This chapter is the data layer the protocol chapters stand on: the
 > key hierarchy from one master seed (A), the primitives (B), storage
 > at rest and its erasure (C), backups (D), linking a second device
@@ -62,7 +63,10 @@ confirmations. The X25519 key is the identity's static exchange key
 (the `x` of the Bluetooth handshake, the static key of the relay
 exchange). It is not the Ed25519 key converted to Montgomery form: a
 test pins that the two differ
-(`exchange_seed_secret_is_not_the_guardian_recipient`).
+(`exchange_seed_secret_is_not_the_guardian_recipient`). The Ed25519
+key is also converted to X25519 (`to_x25519_secret`,
+`crypto/signing.rs`), for one purpose: opening the sealed boxes
+addressed to a guardian's signing key (ADR-002 amendment).
 
 **A3. Device keys** (`DeviceInfo::derive`). Each device of an identity
 has an index `i` (`u32`, 0 for the first device) and
@@ -78,9 +82,9 @@ what device-to-device ratchets are keyed from
 (`bootstrap_device_pair_ratchet`, info `vauchi-device-pair-ratchet-v1`).
 
 **A4. Device registry** (`DeviceRegistry`). The list of an identity's
-devices, each `(device_id, exchange_public_key, name, index,
-created_at, revoked, revoked_at)`, with a version counter and an
-Ed25519 signature by the identity over
+devices, each `(device_id, exchange_public_key, device_name,
+created_at, revoked, revoked_at, last_sync_at)`, with a version
+counter and an Ed25519 signature by the identity over
 
 ```text
 version as LE u64 || count as LE u32
@@ -89,9 +93,11 @@ version as LE u64 || count as LE u32
 
 A registry MUST refuse an eleventh active device (`MAX_DEVICES = 10`),
 a duplicate device id, and the revocation of the last active device.
-Every change bumps the version and re-signs. The next index is the
-number of devices ever registered, revoked ones included, so an index
-is never reused.
+Every change bumps the version; a signed change also re-signs, while
+`add_device_unsigned`, used during linking, bumps it without signing
+and leaves the signature to the caller. No index is stored in an
+entry: the next index is the number of devices ever registered,
+revoked ones included, so an index is never reused.
 
 **A5. Storage keys** (`ShreddingMasterKey`).
 
@@ -144,9 +150,15 @@ format:
 The nonce is random per call from the OS CSPRNG; the 192-bit nonce is
 why XChaCha20 and not AES-GCM. `decrypt` MUST refuse tag `0x03` and
 `decrypt_with_ad` MUST refuse tag `0x02`, so a ciphertext never
-authenticates without the associated data it was made with. A key
-MUST be refused when it is degenerate (`SymmetricKey::try_from_bytes`).
-AES-GCM paths were removed; nothing accepts them.
+authenticates without the associated data it was made with. The tag
+byte itself is not part of the associated data, so this holds for the
+byte and not for the ciphertext: a `0x03` ciphertext made with empty
+associated data, re-tagged `0x02`, opens under `decrypt`. That is a
+defect, vauchi/private#949. A degenerate key MUST be refused
+(`SymmetricKey::try_from_bytes`); the only degenerate key is the
+all-zero one, and `from_bytes_unchecked`, used for keys read back from
+storage, skips the check. AES-GCM paths were removed; nothing accepts
+them.
 
 **B2. Padding** (`pad`, `unpad`). Before a message is encrypted for the
 relay it is padded to a bucket:
@@ -190,20 +202,26 @@ so opening with the wrong key fails as `WrongKey` instead of reading
 garbage; a database from before the row proves its key through the
 identity row and only then gets one.
 
-**C3. Shredding** (`api/shred/storage.rs`). Erasure MUST delete the
-SMK and the bootstrap key from secure storage by name
-(`secure_delete_key`); the database and files stay but open under
-nothing. The SEK and FKEK are never stored: they exist only derived
-from the SMK in memory.
+**C3. Shredding** (`api/shred/storage.rs`, `api/shred/manager.rs`).
+Erasure MUST first delete the SMK and the bootstrap key from secure
+storage by name (`destroy_storage_keys`, `secure_delete_key`). Then it
+overwrites and removes the identity file, the key files and the
+database with its WAL and SHM files, and removes the data directory.
+On flash storage an overwrite may not reach the old blocks, so it is
+deleting the keys that makes the rest unreadable. The SEK and FKEK are
+never stored: they exist only derived from the SMK in memory.
 
 ### Security considerations
 
 - **Destroying the SMK makes the data unrecoverable**, claim
-  [S12](../claims.md): `test_smk_destruction_makes_data_irrecoverable`,
-  `test_fkek_protects_file_keys`,
-  `test_shredding_isolation_across_identities` in
-  `crypto_shredding_integration_tests.rs`, and the release lane case
-  `hard_shred_after_grace_fanout_over_outer_hop_only`. Partial: on
+  [S12](../claims.md): `test_smk_destruction_makes_data_irrecoverable`
+  in `smk_boot_tests.rs` deletes the SMK and the database no longer
+  opens; its namesake in `crypto_shredding_integration_tests.rs`, with
+  `test_fkek_protects_file_keys` and
+  `test_shredding_isolation_across_identities`, shows that the keys are
+  separated; the e2e repository's release lane case
+  `hard_shred_after_grace_fanout_over_outer_hop_only`
+  (`tests/it/action_family_oracles.rs`) runs the shred. Partial: on
   Android and iOS the platform key-destruction step is incomplete.
 - The seed is in the database under the SEK, and the SMK that opens
   the database is in the keychain: an attacker who can read the
@@ -222,8 +240,8 @@ Source: `vauchi-core/src/identity/mod.rs` (v2),
 `api/vauchi/full_backup.rs`.
 
 **D1. Identity backup, v2** (`Identity::export_backup`). The password
-MUST pass the strength check (score 3 of 4, at least 8 characters,
-`identity/password.rs`). Then
+MUST pass the strength check (score 3 of 4, at least 8 bytes of
+UTF-8, not 8 characters, `identity/password.rs`). Then
 
 ```text
 0x02 || salt(16) || Enc(K2, name_len LE u32 || name || seed(32)
@@ -233,6 +251,8 @@ K2 = Argon2id(password, salt)
 
 Import accepts version `0x02` only and parses the plaintext with
 declared lengths that must fit (`a_plaintext_whose_lengths_overrun_it_is_refused`).
+Bytes after the device name are not refused: `parse_backup_plaintext`
+never checks that it reached the end, a defect, vauchi/private#949.
 The restored device keeps the backup's device index.
 
 **D2. Full backup, v3** (legacy, still imported). `0x03 || salt(16) ||
@@ -273,8 +293,9 @@ dimensions, unique ids) before any write, and the restore is one
 transaction on a fresh installation only
 (`full_backup_validation_rejects_invalid_state_before_mutation`).
 
-**D4. Guardian backup, v5** (`export_guardian_backup`). The same
-envelope encrypted under a random 32-byte backup key `B`, which is
+**D4. Guardian backup, v5** (`export_guardian_backup`). The v3
+`FullBackupEnvelope` of D2 (with `version: 5`), not the v6 snapshot,
+encrypted under a random 32-byte backup key `B`, which is
 split among guardians by Shamir's secret sharing (`key_shard.rs`, see
 [Social Recovery](social-recovery.md)):
 
@@ -292,11 +313,10 @@ decrypting (`guardian_backup_key_matches`, constant time).
 **D5. What the app offers.** The backup wizard's default level is
 *Full*; *Identity only* (v2) is the opt-in
 (`vauchi-app/src/ui/backup_recovery.rs`; ADR-058 amendment 2026-10-28,
-Option D). Only the v2 export runs the password strength check of D1:
-`export_full_backup` passes the password to the encoder unchecked,
-and the wizard adds no check of its own, so the file that holds every
-contact's shared key accepts any password today
-(vauchi/private#891).
+Option D). Both exports run the password strength check of D1:
+`export_full_backup` has run it since `5101a890c`
+(vauchi/private#891), so the file that holds every contact's shared
+key is held to the same password as the identity-only one.
 
 ### Failure cases
 
@@ -324,9 +344,7 @@ contact's shared key accepts any password today
   (`backup_v6_vector_imports_with_production_argon2id_and_refuses_a_wrong_password`).
 - A full backup contains every contact's shared key and card. Its
   strength against guessing is the password through Argon2id (B3),
-  and the strength check runs for v2 only (D5): until
-  vauchi/private#891 lands, the default backup is as strong as
-  whatever password the person typed.
+  held to the strength check of D1 like the v2 export (D5).
 - The backup is the seed: see A's note on clones.
 
 ### Vectors
@@ -370,6 +388,8 @@ base64: magic `WBDL`, version 1, the identity key, a fresh random
 four fields after the magic. A parser MUST verify the signature and
 refuse any other version; the QR expires 300 s after its timestamp
 (`LINK_QR_EXPIRY_SECONDS`, ADR-035), checked with a checked addition.
+The parser reads the first 141 bytes (`split_first_chunk::<141>`) and
+ignores any that follow, a defect, vauchi/private#949.
 Off camera, the same payload travels as a join invitation URL with the
 relay's broker code (`invitation.rs`); the trust argument then rests on
 whatever channel carried the URL.
@@ -392,13 +412,17 @@ release the seed without a proximity proof: today the proof is
 `ManualConfirmation { mac, confirmed_at }` with `mac = HMAC-SHA256(
 HKDF(lk, "vauchi-device-link-confirm-mac-v1"), code)` and at most 60 s
 old (`validate_proximity_proof`, constant-time compare;
-`ProximityExpired`, `ProximityNotVerified`).
+`ProximityExpired`, `ProximityNotVerified`). The age is
+`now.saturating_sub(confirmed_at)`, so a `confirmed_at` in the future
+counts as zero seconds old and passes, a defect, vauchi/private#949.
 
 **E4. Response** (`DeviceLinkResponse`). The master seed, display
 name, the index the host assigned (A4's next index), the updated
-signed registry and a JSON sync payload (contacts, own card, ratchet
-states and the rest of the owner's state), encrypted under the link
-key. A refusal (`Declined`, `ConfirmationTimedOut`, `DeviceNameTaken`,
+signed registry and a JSON sync payload, encrypted under the link
+key. The payload (`sync/device_sync/payload.rs`) carries the contacts
+with their shared keys and visibility rules, the imported contacts,
+the own card, tags, groups, places, exchange locations, the contacts'
+device registries and activations; it carries no ratchet states. A refusal (`Declined`, `ConfirmationTimedOut`, `DeviceNameTaken`,
 `Cancelled`) travels on the same return channel under a separate key
 `HKDF(lk, "vauchi-device-link-refusal-v1")`, so it can never decrypt
 as a response.
@@ -479,12 +503,16 @@ input against both salts every time and compare both in constant time;
 the password wins when both match. After a platform biometric, Core
 answers in no less than a fixed minimum time whether a PIN prompt is
 needed, so the presence of a duress PIN does not show in the unlock
-animation. It does show to someone who images the storage: a
-six-digit PIN under Argon2id is about a million guesses offline, so
-the hash reveals whether a duress PIN exists and what it is. The
-duress PIN defends against a coercer who watches the unlock, not one
-who extracts the database, and the second already holds the data
-(the limit F3's model states).
+animation. It does show to someone who images the storage. The duress
+hash is encrypted under the SEK, but `duress_salt` and
+`duress_enabled` are plaintext columns of the identity table
+(`storage/stores/identity.rs`) in an SQLite file that is not itself
+encrypted, so an imager learns that a duress PIN exists without any
+key, a defect, vauchi/private#947. Guessing the PIN needs the SMK;
+with it, a six-digit PIN under Argon2id is about a million guesses
+offline. The duress PIN defends against a coercer who watches the
+unlock, not one who extracts the database and the keychain, and the
+second already holds the data (the limit F3's model states).
 
 **F2. What a duress unlock shows.** `auth_mode` becomes `Duress`.
 Contact listing and lookup answer only decoy contacts, built from the
@@ -539,12 +567,13 @@ Source: `vauchi-core/src/card/`, `visibility.rs`,
 **G1. Card** (`ContactCard`). `{ schema_version: 1, id, display_name,
 fields, avatar?, bio?, field_visibility }`, serialized as JSON; there
 is no canonical byte encoding, and what is signed on the wire is the
-delta of the sync chapter, not the card. Limits, each refused on
-input: display name 1 to 100 characters after text normalisation;
-bio 160 characters; 200 fields; a field's label 64 characters, value
-1 000 bytes, note 500 characters; avatar any common image, normalised
-to WebP of at most 32 768 bytes and 512 px (ADR-042); the whole card
-65 536 bytes of JSON. A field has a type (`Phone`, `Email`, `Social`,
+delta of the sync chapter, not the card. Limits refused on input:
+display name 1 to 100 characters after text normalisation; bio 160
+characters; 200 fields; a field's value 1 000 bytes; the whole card
+65 536 bytes of JSON. Limits enforced by truncation, not refusal: a
+field's label to 64 characters and its note to 500. The avatar is any
+common image, normalised to WebP of at most 32 768 bytes and 512 px
+(ADR-042). A field has a type (`Phone`, `Email`, `Social`,
 `Address`, `Website`, `Birthday`, `Custom`) with per-type validation
 (`field.rs`, `uri.rs`).
 
@@ -555,8 +584,11 @@ the wire (`ContactCard::is_field_shown`,
 fallback value is `Everyone`. What a contact receives is decided per
 field, in this order: a per-contact override; a grant from a group
 the contact is in; a field assigned to any group is hidden from every
-contact without a grant; otherwise the own-card toggle, visible only
-on an explicit `Everyone`. The display name is always sent. The
+contact without a grant; otherwise the contact's stored legacy rules
+must allow the field (`can_see`; an imported contact has none, so it
+gets nothing here), and then the own-card toggle decides, visible
+only on an explicit `Everyone` (`api/vauchi/visibility.rs`). The
+display name is always sent. The
 default-open filter `CardDelta::filter_for_contact` MUST NOT drive
 outbound propagation (ADR-054 G4); `filter_with` and the effective
 visibility do. New fields default to hidden
@@ -567,9 +599,14 @@ visibility do. New fields default to hidden
 ```text
 Cautious  if the contact's identity was recovered (until the fingerprint is re-verified)
 Verified  if the owner marked the fingerprint verified out of band
-High      if the transport is USB or NFC, or the exchange's proximity confidence is High
+High      if the transport proximity is Physical (USB) or ContactRange (NFC),
+          or the exchange's proximity confidence is High
 Standard  otherwise
 ```
+
+A contact stored before trust metrics existed is High only when its
+proximity confidence is High and it was exchanged over NFC or BLE
+(`contact/mod.rs`). An imported contact is always Standard.
 
 `mark_fingerprint_verified` sets `Verified` and clears the recovered
 flag. The metrics behind the decision (transport, confidence, the
@@ -598,8 +635,9 @@ the level is auditable.
   `crypto/password_kdf.rs`, `crypto/encryption.rs`,
   `crypto/padding.rs`, `crypto/shredding.rs`, `crypto/cek.rs`
 - `vauchi-core/src/storage/key_check.rs`, `storage/stores/contact_row.rs`,
-  `storage/stores/ratchet.rs`; `api/vauchi/storage_keys.rs`,
-  `api/shred/storage.rs`
+  `storage/stores/ratchet.rs`, `storage/stores/identity.rs`;
+  `api/vauchi/storage_keys.rs`, `api/shred/storage.rs`,
+  `api/shred/manager.rs`; `sync/device_sync/payload.rs`
 - `vauchi-core/src/backup/full_backup.rs`, `backup/snapshot/codec.rs`,
   `backup/snapshot/mod.rs`, `backup/contact_backup.rs`,
   `backup/key_shard.rs`; `api/vauchi/full_backup.rs`;

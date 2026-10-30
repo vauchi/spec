@@ -7,6 +7,23 @@ Each spec tag maps to the Core commit it was extracted from.
 
 ## Unreleased
 
+- Every chapter checked against Core `a9a911b0a`, relay `f3034bb` and
+  ohttp-relay `a4e7c6e` (vauchi/private#951). Statements that were
+  wrong are corrected. Code defects found are stated as defects
+  against their MUST and filed as vauchi/private#941 to #950. They
+  include:
+  - a BLE contact stored under the identity in the peer's card;
+  - a link-exchange signature that covers neither the card nor the
+    exchange;
+  - a lost held-back ratchet message;
+  - relay purge unbound to the mailbox;
+  - fresh fetch padding that reveals the real tokens;
+  - cross-device rollback;
+  - a duress PIN's existence visible at rest.
+
+  Claims S8 and S15 are now partial. S11 names the paths without
+  forward secrecy. S13 and S14 are no longer stale. The conventions
+  table says what each check really checks.
 - Social Recovery: the recovery window is measured on the vouchers: a
   proof's vouchers span at most 96 h, a helper refuses claims older
   than 192 h, a contact refuses a proof whose earliest voucher is over

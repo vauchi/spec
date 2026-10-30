@@ -4,8 +4,12 @@
 # Test Vectors
 
 Known-answer values produced by the shipped functions in `vauchi-core`
-and verified by its test suite on every pipeline
-(`vauchi-core/tests/it/protocol_test_vectors_tests.rs`). The canonical
+and verified by its test suite: the `identity` to `backup_v6`
+entries by `vauchi-core/tests/it/protocol_test_vectors_tests.rs`, the
+two exchange entries by `protocol_exchange_vectors_tests.rs`. Core's
+`test:core` job runs both files; its `test:vectors` job, which adds
+production Argon2id, filters on `protocol_test_vectors` and so runs
+only the first. The canonical
 file lives in Core at
 `vauchi-core/tests/fixtures/test-vectors/vauchi-protocol-vectors-v1.json`;
 CI fails this book when the copy below differs (ADR-076, decision 5:

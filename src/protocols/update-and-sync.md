@@ -3,7 +3,8 @@
 
 # Card Update and Sync
 
-> **Status: extracted 2026-10-28** from `vauchi/core` `612992b0b`.
+> **Status: extracted 2026-10-28** from `vauchi/core` `612992b0b`;
+> checked against core `a9a911b0a` on 2026-10-30.
 > How a changed card reaches every contact (sections A to D) and every
 > own device (section E), through a relay that stores what it cannot
 > read. Claims backed: [S1](../claims.md), [S2](../claims.md),
@@ -48,9 +49,8 @@ Sender                                 Relay                         Recipient
   |   { recipient token T_day,           |                              |
   |     ciphertext, origin_hint? }       |                              |
   |------------------------------------->| store under T_day            |
-  |                                      |<-- register tokens (today,   |
-  |                                      |     yesterday, owed days)    |
-  |                                      |<-- POST /v2/fetch            |
+  |                                      |<-- POST /v2/fetch { tokens:  |
+  |                                      |     today, yesterday, owed } |
   |                                      |--> blobs ------------------->|
   |                                      |      decrypt, check, apply   |
   |                                      |<-- ACK (relay deletes)       |
@@ -109,7 +109,9 @@ under the CEK with tag `0x02`, and the inner payload is
 stores the CEK with the card and encrypts the card under it at rest;
 destroying the CEK erases that card (Keys and Cards, C1). A Kani
 harness proves the decoder never panics and reads each field at its
-offset (`cek_wrapped_payload_decode_never_panics_and_reads_each_field_at_its_offset`).
+offset (`cek_wrapped_payload_decode_never_panics_and_reads_each_field_at_its_offset`),
+for inputs of at most 136 bytes. The decoder accepts bytes trailing
+the `ct_len` ciphertext and ignores them (vauchi/private#949).
 
 **B5. Inner payload versions.** The first byte of a ratchet plaintext
 routes it:
@@ -126,7 +128,10 @@ routes it:
 | `0x0a` | resync request | B9 |
 
 A receiver MUST reject an unknown version byte. All of them travel in
-identical ratchet envelopes; the relay cannot tell them apart.
+the same ratchet envelope, but the padding bucket follows the
+payload's length, so kinds of different sizes land in different
+buckets. A genesis copy (C5) carries the header `(0, 0, 0)` with a
+fresh `dh_public`.
 
 **B6. Double Ratchet** (`DoubleRatchetState`). Each `(contact, device
 pair)` has one ratchet, seeded at exchange time (`bootstrap_exchange_ratchet`,
@@ -157,11 +162,20 @@ X25519(our_dh, their_new), root_info)`, generate a fresh `our_dh`,
 `(root, send) = HKDF(salt = root, X25519(our_new, their_new),
 root_info)`, generation plus one. Limits: at most 1 000 skipped keys
 held, at most 1 000 skipped in one jump, at most 2 000 messages per
-chain; beyond them the message is refused. Decryption runs on a copy
-of the state, and the state is replaced only when the tag and the
-padding both verify (`test_crypto_hardening_ratchet_*_rolls_back_state`).
-Headers are not encrypted: the relay sees `dh_public`, the generation
-and the index of every blob (`ratchet.rs`, #229).
+chain; beyond them the message is refused. Skipped keys have no age
+limit. Decryption runs on a copy of the state, and the state is
+replaced only when the tag and the padding both verify
+(`test_crypto_hardening_ratchet_*_rolls_back_state`). "Padding
+verifies" means only that the length prefix fits the plaintext: the
+receiver never checks the bucket size (`is_valid_bucket_size` is
+called only in tests, vauchi/private#946). Headers are not encrypted:
+the relay sees `dh_public`, the generation and the index of every
+blob (`ratchet.rs`, #229).
+
+The ratchet MUST decrypt a message delivered out of order, and does
+not always: a responder message the relay holds back does not decrypt
+once the initiator has started its next round (observed in a test;
+vauchi/private#943).
 
 **B7. One copy per device** (`encrypt_payload_for_contact_devices`).
 When the contact's device registry is known and the bilateral
@@ -219,18 +233,30 @@ Source: `vauchi-core/src/api/vauchi/sync_http.rs`, `send_phase.rs`,
 `api/sync/card_update.rs`, `api/vauchi/receive_routing.rs`,
 `network/mailbox_token.rs`, `network/relay_client.rs`.
 
-**C1. Registering** (`register_mailbox_tokens`, `plan_receive`). On
-each sync the client registers, for every contact, the tokens of the
-days it still owes: from its last exhaustive checkpoint minus one day
-(rotation skew) up to today, never more than 120 days back
-(`RETAINED_DAYS`), at most 14 owed days per cycle plus yesterday and
-today. The tokens of each day epoch form their own list, and each
-list MUST be padded to a multiple of 256 with random tokens and
-shuffled (`registration_batches` in `receive_context.rs`,
-`batch_register_tokens_with_device_sync`), so the relay does not learn
-the number of contacts or which tokens recur; a fetch request never
-spans two lists (`fetch_chunks` in `http_adapter.rs`, core!2060), so
-consecutive days' requests share no token.
+**C1. Choosing tokens** (`register_mailbox_tokens`, `plan_receive`).
+On each sync the client computes, for every contact that is not
+blocked, the tokens of the days it still owes: from its last
+exhaustive checkpoint minus one day (rotation skew) up to today, never
+more than 120 days back (`RETAINED_DAYS`), at most 14 owed days per
+cycle plus yesterday and today. Registering is local: the
+`RegisterMailbox` message only fills the transport's
+`registered_batches` (`http_adapter.rs`); the relay receives no
+registration and learns tokens only from `/v2/fetch`. The tokens of
+each day epoch form their own list, padded to a multiple of 256 with
+random tokens and shuffled (`padded_registration_batches`,
+`registration_batches` in `receive_context.rs`,
+`batch_register_tokens_with_device_sync`), and fetched in requests of
+at most 100 tokens (`MAX_FETCH_TOKENS`); a request never spans two
+lists (`fetch_chunks`, core!2060).
+
+The padding MUST hide the number of contacts and which tokens recur,
+and does not (vauchi/private#946). It is drawn fresh on every sync
+while the real tokens recur, so two fetches of one day's list
+intersect in exactly the real tokens: across cycles the relay learns
+the client's real token set and with it the number of contacts.
+Keeping day epochs apart does not unlink days either: day D's tokens
+are fetched again on D+1 as yesterday's, so the relay can link those
+two requests.
 
 **C2. Fetching.** `POST /v2/fetch` returns blobs for the registered
 tokens, paged; the client acknowledges each blob it has processed, by
@@ -264,11 +290,15 @@ checkpoint advances only after an exhaustive pass.
    newer, removed fields go, the name changes; the new CEK is stored.
 10. Ratchet state, nonce, card and version floor are written in one
     transaction; on any failure nothing is written and the ratchet
-    does not advance past the message.
+    does not advance past the message. The owner's notes on removed
+    fields are deleted before that transaction and outside it, best
+    effort, so an update that then fails has still deleted them.
 
 **C4. Blocking and receipts.** A blocked contact receives no further
-updates and its updates fail at step 1; the block is local and synced
-only to the owner's own devices, never signalled to the blocked
+updates. Its tokens are neither fetched nor accepted
+(`receive_context.rs`), so its blobs never reach step 1, whose
+`ContactBlocked` check is a second guard. The block is local and
+synced only to the owner's own devices, never signalled to the blocked
 contact (ADR-056). The client sends no delivery or read receipt of any
 kind: there is no code path that would emit one, and the settings
 toggle that once claimed to control delivery receipts was removed
@@ -283,8 +313,12 @@ ratchet message rooted directly in the shared key
 (`vauchi-genesis-root-v1`, `vauchi-genesis-responder-v1`); the
 receiver opens it statelessly, verifies the inner identity signature
 over both identities, the header and the alert, and persists the
-alert, its nonce and the new session in one transaction. The first
-genesis message has no forward secrecy; it resumes at the first reply.
+alert, its nonce and the new session in one transaction. A card delta
+or cover payload to a peer device whose device-pair ratchet has this
+side as a responder that has not yet received also goes out this way
+(`propagation.rs`). Every genesis envelope is a fresh message 1 and
+the sender keeps no session from it (`persist_session: false`), so no
+genesis envelope has forward secrecy.
 
 ---
 
@@ -293,10 +327,12 @@ genesis message has no forward secrecy; it resumes at the first reply.
 Per `(contact, device)` ratchet: a responder cannot send until it has
 received once (`can_send`); every send or receive advances and
 persists the state. Per outbound update (`storage/pending`): `Pending`
-→ sent, in flight → acknowledged by the relay (`Stored`) → removed;
-timeouts return it to `Pending` with a retry count. Per receive
-cycle: register → fetch pages → process → acknowledge → checkpoint
-when exhausted.
+→ `Sending` → deleted by `mark_update_sent` as soon as the relay
+accepts the send (`send_phase.rs`); a failed send becomes `Failed {
+retry_at }` and is retried. There is no acknowledged state: delivery
+rests on the relay's store-and-forward. Per receive cycle: choose
+tokens → fetch pages → process → acknowledge → checkpoint when
+exhausted.
 
 ---
 
@@ -332,8 +368,11 @@ never drains another's copy. The legacy envelope sets `sender_id` to
 the identity key in hex for these messages; the HTTP transport sends
 only the token and the ciphertext.
 
-**E3. Duress.** Under a duress unlock every item is replaced by a cover
-item of the same length and timestamp (Keys and Cards, F3).
+**E3. Duress.** Under a duress unlock, `record_sync_item_or_cover`
+replaces an item by a cover item of the same length (Keys and Cards,
+F3). About twenty other call sites journal through `record_sync_item`
+with no duress check. Whether a duress session can reach any of them
+is an open question (vauchi/private#947).
 
 ---
 
@@ -345,49 +384,63 @@ item of the same length and timestamp (Keys and Cards, F3).
   unknown version byte, zero CEK: refused before any write.
 - Too many skipped messages or too long a chain: refused.
 - Relay unreachable: updates stay pending and retry; tokens are
-  re-registered next cycle.
+  fetched again next cycle.
 - Offline longer than 120 days: the relay has dropped the blobs; the
   contact's next update or a resync request restores the card.
 
 ## Security considerations
 
 - **The relay cannot read a card or an update**, claim
-  [S1](../claims.md): `changes_stay_secret` in `card_update.spthy`
-  (falsified only by a leaked channel key), and the release lane case
-  `integration_ohttp_relay_observations_exclude_update_content`. What
-  the relay does see: the token, the blob's bucket size, the time, the
-  ratchet header, an origin-hint blob when present, and the number of
-  registered tokens rounded to 256.
+  [S1](../claims.md): `changes_stay_secret` in `card_update.spthy`,
+  which has no falsifying control, and the release lane case
+  `integration_ohttp_relay_observations_exclude_update_content`, which
+  checks only the relay's logs and metrics. What the relay does see:
+  the token, the blob's bucket size, the time, the ratchet header, an
+  origin-hint blob when present, and fetch requests of at most 100
+  tokens (the relay refuses more), whose real subset it picks out
+  across cycles (C1).
 - **From the contact it claims, applied once, never rolled back**,
   claim [S2](../claims.md):
   `update_comes_from_the_sender_for_this_recipient` (falsified
-  without the recipient key in the signature),
-  `each_update_is_applied_once`, and `no_rollback`, which the model
-  proves only in its control (without the floor it is falsified; with
-  the floor Tamarin reaches no verdict), so the floor's correctness
-  rests on the code and `StaleVersion` tests. A leaked identity key
-  defeats all three, as the lemmas state. The floor is per sender
-  device, so a stale delta from one device cannot be used to roll back
-  what another device sent.
+  without the recipient key in the signature) and
+  `each_update_is_applied_once`; a leaked identity key defeats both,
+  as the lemmas state. `no_rollback` exists only under
+  `-DNO_VERSION_FLOOR`, where CI asserts it falsified
+  (`ci/formal-verification.sh`); it is never proven, and it has no
+  identity-reveal disjunct. The floor's correctness rests on the code
+  and the `StaleVersion` tests. Updates MUST NOT roll back, and across
+  devices they can (vauchi/private#946): floors are per sender device
+  and order nothing between devices, and only an `Added` change is
+  guarded, by the field's `updated_at`. A removal or a name change in
+  a delta another device sent earlier, withheld and delivered late, is
+  applied (`CardDelta::apply`).
 - **Sizes are padded**, claim [S5](../claims.md), partial: the buckets
   of B6 and the Kani harness
-  `unpad_never_panics_and_only_accepts_a_prefixed_plaintext`; the
-  registration batches of C1. Not measured against a traffic-analysis
+  `unpad_never_panics_and_only_accepts_a_prefixed_plaintext`, for
+  inputs of at most 12 bytes; the padded token lists of C1, which do
+  not hide the real tokens. Not measured against a traffic-analysis
   attacker; the ratchet header and the blob's timing are in the clear.
 - **Old messages stay secret after a compromise**, claim
   [S11](../claims.md): `test_dr_forward_secrecy`,
   `test_forward_secrecy_compromised_state`,
-  `test_dr_skipped_message_limit`. Each message key is deleted after
-  use; a stolen ratchet state opens nothing earlier and the channel
-  heals at the next DH step. Two paths have no forward secrecy and the
-  claim does not cover them: the first genesis message (C5) and all
-  device-to-device sync (E2).
+  `test_dr_skipped_message_limit`, which never exceeds the limit. Each
+  message key is deleted after use; a stolen ratchet state opens
+  nothing earlier and the channel heals at the next DH step. Paths
+  without forward secrecy, which the claim does not cover: every
+  genesis envelope (C5), card deltas sent that way included; the
+  device-pair initiator's first chain, rooted in the peer's static
+  device exchange key (`bootstrap_device_pair_ratchet`); and all
+  device-to-device sync (E2). Skipped keys have no age limit, so the
+  key of a withheld message stays on the device until the message
+  arrives (vauchi/private#946, vauchi/private#943).
 - **Tokens, not keys, route**, the client side of [S4](../claims.md):
   tokens rotate daily and derive from the shared key and the
-  recipient's key; the relay sees neither. The device-sync envelope's
-  identity-key `sender_id` exists in the legacy message type and is
-  not sent over HTTP; a transport that sent the whole envelope would
-  leak it.
+  recipient's key; the relay sees neither. The ratchet header's clear
+  `dh_public` stays the same for a whole chain, so it links one
+  channel's tokens across days until the next DH step (related to
+  vauchi/private#229). The device-sync envelope's identity-key
+  `sender_id` exists in the legacy message type and is not sent over
+  HTTP; a transport that sent the whole envelope would leak it.
 - **A stolen ratchet state** lets the thief deliver what they like over
   that channel until it heals, but not as the contact: the delta's
   identity signature still binds sender and recipient.
@@ -411,12 +464,14 @@ in the relay-mediated exchange.
   `padding_proofs.rs`, `kdf.rs`
 - `vauchi-core/src/api/vauchi/sealing.rs`, `propagation.rs`,
   `visibility.rs`, `features.rs`, `sync_http.rs`, `receive_context.rs`,
-  `receive_routing.rs`, `resync.rs`, `device_sync_loop.rs`;
-  `api/send_phase.rs`; `api/sync/card_update.rs`,
-  `registry_handshake.rs`, `device_orchestrator.rs`
+  `receive_routing.rs`, `resync.rs`, `device_sync_loop.rs`,
+  `registry_push.rs`, `duress_cover.rs`; `api/send_phase.rs`;
+  `api/sync/card_update.rs`, `registry_handshake.rs`,
+  `device_orchestrator.rs`
 - `vauchi-core/src/network/mailbox_token.rs`, `anonymous.rs`,
   `origin_hint.rs`, `message.rs`, `protocol.rs`, `relay_client.rs`,
   `http_adapter.rs`; `exchange/genesis.rs`, `exchange/ratchet_bootstrap.rs`
 - `vauchi-core/verification/card_update.spthy`
+- `vauchi/relay` `src/http_api.rs` (fetch limit)
 - ADR-029 (rotating tokens), ADR-037 (OHTTP), ADR-056 (blocking),
   ADR-057 (receipts), ADR-064 (per-device routing), ADR-068 (genesis)
