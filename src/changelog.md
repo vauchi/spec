@@ -7,6 +7,28 @@ Each spec tag maps to the Core commit it was extracted from.
 
 ## Unreleased
 
+- Social Recovery: the recovery window is measured on the vouchers: a
+  proof's vouchers span at most 96 h, a helper refuses claims older
+  than 192 h, a contact refuses a proof whose earliest voucher is over
+  90 days old, and showing the same old key again resumes the claim in
+  progress (maintainer, 2026-10-30). Core still runs the old rules
+  (vauchi/private#919, vauchi/private#926).
+- Social Recovery checked against Core `a9a911b0a` and relay `f3034bb`.
+  Corrected:
+  - three to nine guardians;
+  - proofs are stored in the clear;
+  - the token signs `created_at`;
+  - a sealed shard is 124 bytes, and the sealed box binds neither key
+    into its derivation;
+  - at most 252 restore subsets;
+  - the Kani harnesses stub what they stub;
+  - the relay keeps one proof per hash, owned by its first signer, and
+    the revocation and conflict detection are not wired;
+  - `accept_recovery` overwrites the shared key;
+  - guardian tokens prove nothing against the thief.
+
+  New defects: vauchi/private#927, #928, #929 and #930. S16's statement
+  names the attacker its lemma keeps the key from.
 - Related Work: the Signal protocols and sealed sender, Pond, Briar's BQP,
   Magic Wormhole, Delta Chat's SecureJoin, SimpleX, Session, the PGP web
   of trust, Zooko's triangle and petnames, Plaxo, local-first software and

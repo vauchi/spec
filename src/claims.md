@@ -149,10 +149,10 @@ Extracted on 2026-10-28 from the security-claims page of vauchi.app/docs, itself
 ## S16. Accepting a recovery needs the real recovery
 
 - **Attacker**: Someone who tells your contacts you lost your phone, with the old device or not.
-- **Statement**: A contact only rekeys with a recovering user whose recovery was genuinely initiated, and the recovered key stays secret from the contact who accepts it.
+- **Statement**: A contact only rekeys with a recovering user whose recovery was genuinely initiated, unless both helpers it counts are corrupted, and the key it then agrees with the recovered user stays secret from the attacker.
 - **If false**: An impostor takes over a contact's channel by claiming a recovery.
 - **Status**: partial
-- **Backed by**: Tamarin `recovery_acceptance.spthy`, lemmas `accept_needs_the_real_recovery`, `john_key_secrecy`, `alice_rekeys_only_with_an_accepting_contact`, and the attack lemma `a_stranger_can_rekey_with_the_recovering_user`. Partial: a contact who accepts a recovery proof does not yet receive a key bound to the recovered identity; the fix is in progress.
+- **Backed by**: Tamarin `recovery_acceptance.spthy`, lemmas `accept_needs_the_real_recovery`, `john_key_secrecy`, `alice_rekeys_only_with_an_accepting_contact` (under `-DIN_PERSON` only), and the attack lemma `a_stranger_can_rekey_with_the_recovering_user`. Partial: a contact who accepts a recovery proof does not yet receive a key bound to the recovered identity; the fix is in progress.
 - **Section**: [social-recovery](protocols/social-recovery.md)
 
 ## S17. Social recovery needs the guardians, and only the real ones
