@@ -172,10 +172,13 @@ called only in tests, vauchi/private#946). Headers are not encrypted:
 the relay sees `dh_public`, the generation and the index of every
 blob (`ratchet.rs`, #229).
 
-The ratchet MUST decrypt a message delivered out of order, and does
-not always: a responder message the relay holds back does not decrypt
-once the initiator has started its next round (observed in a test;
-vauchi/private#943).
+The ratchet MUST decrypt a message delivered out of order, including a
+responder message the relay holds back until after the initiator has
+started its next round. On Core `a9a911b0a` it did not: the skipped
+keys of the sender's previous chain were stored under the receiver's
+own generation counter, which differs from the sender's on the
+responder's side (observed in a test, vauchi/private#943; fixed on
+core `issue/943`, whose test is named in the issue).
 
 **B7. One copy per device** (`encrypt_payload_for_contact_devices`).
 When the contact's device registry is known and the bilateral
@@ -480,9 +483,9 @@ is an open question (vauchi/private#947).
   genesis envelope (C5), card deltas sent that way included; the
   device-pair initiator's first chain, rooted in the peer's static
   device exchange key (`bootstrap_device_pair_ratchet`); and all
-  device-to-device sync (E2). Skipped keys have no age limit, so the
-  key of a withheld message stays on the device until the message
-  arrives (vauchi/private#946, vauchi/private#943).
+  device-to-device sync (E2). Skipped keys have a count bound (1 000 per
+  session) but no age limit, so the key of a withheld message stays on
+  the device until the message arrives (vauchi/private#946).
 - **Tokens, not keys, route**, the client side of [S4](../claims.md):
   tokens rotate daily and derive from the shared key and the
   recipient's key; the relay sees neither. The ratchet header's clear

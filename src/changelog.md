@@ -23,6 +23,10 @@ Each spec tag maps to the Core commit it was extracted from.
   older than 192 h, not 90 days; the recovery is one 192-hour window
   (maintainer, 2026-10-30, vauchi/private#959). Core's check landed
   the same day (core `issue/959`, vauchi/private#926).
+- Card Update and Sync B: the held-back responder message now decrypts
+  (vauchi/private#943, core `issue/943`); the chapter states the cause
+  and the count bound on skipped keys instead of the defect.
+
 - Every chapter checked against Core `a9a911b0a`, relay `f3034bb` and
   ohttp-relay `a4e7c6e` (vauchi/private#951). Statements that were
   wrong are corrected. Code defects found are stated as defects
