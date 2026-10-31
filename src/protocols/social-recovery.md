@@ -213,8 +213,9 @@ recovery that starts late gets less than 96 h, and a recovering device
 MAY drop its oldest vouchers to keep the rest inside the span. The
 parser takes exactly 73 bytes and never panics
 (`recovery_claim_parse_never_panics_and_reads_each_field_at_its_offset`);
-Kani proves the same of a contact voucher and a guardian token, and
-that the age and skew bounds are exact with no overflow
+Kani proves the same of a contact voucher and a guardian token (by
+hand: 54 minutes for the token, past the CI caps), and in CI that the
+age and skew bounds are exact with no overflow
 (`recovery_voucher_parse_accepts_exactly_a_contact_voucher`,
 `guardian_token_parse_accepts_exactly_one_token`,
 `recovery_time_bounds_are_exact_and_never_overflow`, vauchi/private#937).
