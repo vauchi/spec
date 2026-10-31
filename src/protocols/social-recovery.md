@@ -124,7 +124,10 @@ guardian (A3), and stores the set on the relay under
 `SHA-256(owner_pk || "guardians")` with a request signed over
 `"guardian-store" || owner_pk || hash || timestamp as BE u64`, which
 does not cover the entries (each token carries its own signature); an
-empty set is a signed `"guardian-delete"`. The relay MUST verify the
+empty set is a signed `"guardian-delete"`. Core trusts at most nine
+contacts for recovery, the guardian maximum; a tenth is refused where
+the switch is, and a guardian count is checked before it is narrowed
+to a byte (vauchi/private#929). The relay MUST verify the
 signature, the hash binding and a timestamp within 60 s, refuse a
 replayed signature, keep at most
 10 entries of at most 256 bytes and 2 048 bytes in all, expire the set
@@ -198,10 +201,14 @@ Source: `vauchi-core/src/recovery/mod.rs`, `recovery/proofs.rs`,
 The recovery window is measured on the vouchers, not on the claim: the
 vouchers in a proof MUST span at most 96 h (B4). A helper sees only
 the claim, never the vouchers already given, so its own bound is
-looser: it MUST refuse a claim older than 192 h (`MAX_AGE_SECS`). A
+looser: it MUST refuse a claim older than 192 h (`MAX_AGE_SECS`), and
+a claim stamped more than 10 minutes ahead of its own clock
+(`MAX_FUTURE_SKEW_SECS`, `TimestampInFuture`): further ahead is a
+forgery that would stretch every age bound, not a slow clock
+(maintainer, 2026-10-31). A
 recovery that starts late gets less than 96 h, and a recovering device
 MAY drop its oldest vouchers to keep the rest inside the span. The
-parser never panics
+parser takes exactly 73 bytes and never panics
 (`recovery_claim_parse_never_panics_and_reads_each_field_at_its_offset`).
 
 A recovering device keeps one claim in progress. Showing the same
@@ -218,21 +225,31 @@ timestamp as LE u64`, serialized as
 
 ```text
 0x01 || old_pk || new_pk || helper_pk || timestamp || signature(64)          contact voucher
-0x02 || ... same ... || token_len as LE u32 || GuardianToken                 guardian voucher
+0x03 || ... same ... || token_len as LE u32 || GuardianToken                 guardian voucher
 ```
 
-A guardian helper opens its token from the relay set (A4) and attaches
-it; the recovering device checks that the token names the claim's
-`old_pk` as designator and the helper as guardian when it adds the
-voucher (B3). The voucher signature does not cover the token, and the
-token is signed by the old key, which the thief holds: a token proves
-nothing against the thief, and no decision reads it.
+A guardian voucher's signature is over the same fields followed by the
+token's postcard bytes, so a token cannot be stripped, swapped or added
+after signing; format 2, which carried the token outside the signature,
+is refused (maintainer, 2026-10-31, vauchi/private#930). A parser takes
+exactly the header, or the header, the length and that many token bytes.
+A guardian helper opens its token from the relay set (A4), takes only
+an entry whose token names the claim's `old_pk` as designator and
+itself as guardian, and attaches it; the recovering device checks the
+same when it adds the voucher (B3). The token is signed by the old key,
+which the thief holds: a token proves nothing against the thief, it is
+not authentication, and no decision reads it.
 
 **B3. Proof** (`RecoveryProof`, `RecoveryProgress`). The recovering
 person collects vouchers until the threshold (default 3, 1 to 9) is
-met. Adding a voucher MUST refuse mismatched keys, a self-voucher by
+met. Adding a voucher, while collecting as when building the proof,
+MUST refuse mismatched keys, a self-voucher by
 the old or new key (vauchi/private#797), a bad signature, a bad or
 misaddressed guardian token, and a second voucher from the same key.
+Validating a proof re-runs those checks on every voucher, bounds the
+threshold to 1 to 9, and at a clock refuses a voucher stamped more
+than 10 minutes ahead (B1). The proof parser takes exactly its postcard
+bytes and only version 2 (vauchi/private#930).
 The proof is uploaded sealed to the old key (vauchi/private#936):
 version byte 3, then `new_pk` in the clear, then the postcard proof
 (version 2: `old_pk`, `new_pk`, threshold, vouchers, times) encrypted
@@ -301,10 +318,6 @@ of 2026-10-30:
   48 h.
 - A contact's check reads no time at all: `validate` and
   `verify_for_contact` take no clock (vauchi/private#926).
-- The claim and proof parsers accept trailing bytes; the proof version
-  is not checked; a proof with threshold 0 validates; a claim stamped
-  in the future never expires; the recovering device refuses an
-  old-key voucher only at upload (vauchi/private#930).
 
 ### Security considerations
 

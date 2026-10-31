@@ -7,6 +7,13 @@ Each spec tag maps to the Core commit it was extracted from.
 
 ## Unreleased
 
+- Social Recovery A4, B1 to B3: at most nine recovery-trusted contacts
+  (vauchi/private#929, core `issue/929`); exact-length claim, voucher
+  and proof parsers, the proof at version 2 only, a threshold of 1 to 9
+  validated, the guardian token under the voucher signature as format 3
+  with format 2 refused, a 10-minute future skew on claims and vouchers,
+  and the old-key voucher refused while collecting (vauchi/private#930,
+  core `issue/930`). The #930 defect bullet is gone.
 - Relay A7: the purge body carries no `recipient_id`; the relay erases
   the mailbox addressed by the verified signing key, checks every
   signature with dalek `verify_strict`, and lower-cases the hex ids of
