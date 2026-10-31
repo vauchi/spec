@@ -503,14 +503,21 @@ input against both salts every time and compare both in constant time;
 the password wins when both match. After a platform biometric, Core
 answers in no less than a fixed minimum time whether a PIN prompt is
 needed, so the presence of a duress PIN does not show in the unlock
-animation. It does show to someone who images the storage. The duress
-hash is encrypted under the SEK, but `duress_salt` and
-`duress_enabled` are plaintext columns of the identity table
-(`storage/stores/identity.rs`) in an SQLite file that is not itself
-encrypted, so an imager learns that a duress PIN exists without any
-key, a defect, vauchi/private#947. Guessing the PIN needs the SMK;
-with it, a six-digit PIN under Argon2id is about a million guesses
-offline. The duress PIN defends against a coercer who watches the
+animation. Nor does it show to someone who images the storage without
+the SMK. Every identity with an app password MUST carry a duress salt
+and a duress seal, `Enc_SEK(flags || hash)`
+(`storage/stores/identity.rs`): with no PIN set, a random salt and a
+random hash with the flags 0, written with the app password and again
+when the PIN is disabled. The plain `duress_enabled` column MUST stay
+0. The flags say whether a PIN is set and whether a duress session has
+taken the own-card copy over (F2). Since a duress hash always exists,
+`verify` always runs both Argon2id hashes. The SQLite file is not
+itself encrypted, so what remains readable is each row's shape, and
+the identity row and the own-card copy have the same shape with or
+without a PIN. Decoy contacts and the duress settings, tags and places
+still only have rows for a duress user (vauchi/private#1003). Guessing
+the PIN needs the SMK; with it, the seal says whether a PIN is set, and
+a six-digit PIN under Argon2id is about a million guesses offline. The duress PIN defends against a coercer who watches the
 unlock, not one who extracts the database and the keychain, and the
 second already holds the data (the limit F3's model states).
 
@@ -518,7 +525,10 @@ second already holds the data (the limit F3's model states).
 Contact listing and lookup answer only decoy contacts, built from the
 decoy store with a display-only fake key `SHA-256(id)` and a random
 shared key. The own card shown is a session copy seeded from the real
-card; edits touch the copy. The duress and decoy settings screens
+card; edits touch the copy. Every identity with an app password has the
+copy, made from the real card with the password and again when the PIN
+is disabled, so its row does not say whether a PIN exists. The duress
+and decoy settings screens
 answer from a session stand-in that starts as "not set up" and accepts
 whatever is entered, so the coercer can neither see nor change the
 real configuration; the stand-in is dropped at the next unlock. The
