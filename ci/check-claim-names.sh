@@ -21,7 +21,10 @@
 # A name that lives in an open merge request is listed in
 # `claim-names.pending` (next to this script, or $CLAIM_NAMES_PENDING):
 # missing then means PENDING, not FAIL, and the check fails once the name
-# is present so the line is removed.
+# is present so the line is removed. When the search roots are that merge
+# request's own branch rather than main, the caller sets
+# CLAIM_NAMES_SOURCES_MAY_LAND=1 and a present pending name is LANDING,
+# not stale: the line comes out after the merge (vauchi/private#937).
 
 set -eu
 
@@ -60,7 +63,9 @@ check() {
     for name in $(candidates "$claims"); do
         checked=$((checked + 1))
         if grep -rqw -- "$name" "$@"; then
-            if is_pending "$name"; then
+            if is_pending "$name" && [ "${CLAIM_NAMES_SOURCES_MAY_LAND:-0}" = 1 ]; then
+                echo "LANDING: $name is in these sources; remove it from claim-names.pending once they merge"
+            elif is_pending "$name"; then
                 echo "FAIL: $name is on main now; remove it from claim-names.pending" >&2
                 missing=$((missing + 1))
             fi
@@ -109,7 +114,11 @@ self_test() {
         echo "SELF-TEST FAILED: a pending name that exists must fail until the line is removed" >&2
         exit 1
     fi
-    echo "self-test OK: missing fails, present and non-identifiers pass, pending waits, stale pending fails"
+    CLAIM_NAMES_SOURCES_MAY_LAND=1 CLAIM_NAMES_PENDING="$tmp/stale.pending" check "$tmp/good.md" "$tmp/root" >/dev/null || {
+        echo "SELF-TEST FAILED: a pending name present in a merge request's own sources must pass" >&2
+        exit 1
+    }
+    echo "self-test OK: missing fails, present and non-identifiers pass, pending waits, stale pending fails, a landing name passes"
 }
 
 [ "$#" -ge 1 ] || usage
