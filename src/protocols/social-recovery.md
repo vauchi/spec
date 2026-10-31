@@ -32,9 +32,9 @@ stores the pieces can read none of them.
 - **Contact** (John): decides whether to accept the recovery.
 - **Thief**: holds the old device, with its identity key and every
   shared key on it.
-- **Relay**: stores sealed guardian entries it cannot read, and
-  recovery proofs in the clear; the attacker of both models owns it
-  and the network.
+- **Relay**: stores sealed guardian entries and recovery proofs it
+  cannot read, seeing only each proof's version byte and new key; the
+  attacker of both models owns it and the network.
 
 ---
 
@@ -233,15 +233,26 @@ person collects vouchers until the threshold (default 3, 1 to 9) is
 met. Adding a voucher MUST refuse mismatched keys, a self-voucher by
 the old or new key (vauchi/private#797), a bad signature, a bad or
 misaddressed guardian token, and a second voucher from the same key.
-The proof (postcard, version 2, in the clear) is uploaded under
-`SHA-256(old_pk)` with an owner signature by the new identity over
-`"recovery-store" || key_hash || SHA-256(proof) || timestamp as BE
-u64`, which the relay verifies within 60 s against the `owner_pk` sent
-with it. The relay reads the proof's first 65 bytes, the version byte
-then `old_pk` and `new_pk`, and refuses an upload whose version is not
-2, whose `old_pk` does not hash to the key hash, whose `owner_pk` is
-not the proof's `new_pk`, or that carries no signature
-(vauchi/private#927). It keeps one proof per owner under a hash, at
+The proof is uploaded sealed to the old key (vauchi/private#936):
+version byte 3, then `new_pk` in the clear, then the postcard proof
+(version 2: `old_pk`, `new_pk`, threshold, vouchers, times) encrypted
+with XChaCha20-Poly1305 under `HKDF(old_pk, "Vauchi_RecoveryProof_v3")`
+with those 33 header bytes as associated data, so a header moved onto
+another body fails the tag. Whoever holds `old_pk`, that is the
+person's contacts and a thief of the old device, opens it; the relay
+and anyone else learn the new key and nothing of the helpers. It is
+stored under `SHA-256(old_pk)` with an owner signature by the new
+identity over `"recovery-store" || key_hash || SHA-256(sealed proof)
+|| timestamp as BE u64`, which the relay verifies within 60 s against
+the `owner_pk` sent with it. The relay reads the 33-byte header and
+refuses an upload whose version byte is not 3, whose `owner_pk` is not
+the header's `new_pk`, or that carries no signature
+(vauchi/private#927); it cannot check which old key a proof belongs
+to, and a proof filed under the wrong hash simply fails to open at the
+contact. A proof pasted between people out of band stays the plain
+postcard, which a reader tells apart by its first byte. The sealed
+form has a vector (`recovery_proof`,
+[Test Vectors](../vectors.md)). The relay keeps one proof per owner under a hash, at
 most four owners, each replaced only by its own key; a fifth owner is
 refused with `429` until a slot expires. Proofs are at most 4 KiB and
 are kept 9 days from their last upload, a day past the 192 h a contact
@@ -314,11 +325,13 @@ of 2026-10-30:
 - The 96 h span is measured on the helpers' own clocks. A helper with
   a wrong clock can push a proof outside the window, or stretch it by
   its error; one helper alone cannot move another helper's timestamp.
-- The proof is stored in the clear. The relay learns the recovering
-  identity's old key (inside the proof, stored under its hash), the
-  new key (owner key and proof), the vouchers' keys and, for guardian
-  vouchers, their tokens: a recovery is visible metadata to the relay
-  by design, so that contacts can find it.
+- The relay learns that a recovery exists under `SHA-256(old_pk)` and
+  the new key that owns the slot; the old key, the vouchers' keys and
+  guardian tokens are sealed to the old key (vauchi/private#936).
+  Whoever knows the old key opens the proof, and a relay may have seen
+  it elsewhere (guardian-store `designator_pk`, account deletion). The
+  hash is stable for the slot's life, so the relay links every query
+  for one recovery; a daily rotation is vauchi/private#998.
 
 ---
 

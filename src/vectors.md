@@ -27,7 +27,13 @@ Ratchet step and one message), `mailbox_tokens` (the three daily
 tokens), `backup` (a legacy v3 file and its key) and `backup_v6` (the
 file the app writes today: the authenticated `0x06 || salt` header,
 the Argon2id base key, the `vauchi-backup-v6-state` key and a complete
-file), `qr_symmetric` and `link_exchange` (below). The v6 entry is produced with the production Argon2id
+file), `qr_symmetric` and `link_exchange` (below), and `recovery_proof` (the
+stored recovery proof of Social Recovery B3: fixed old, new and helper
+seeds, the sealing key `HKDF(old_pk, "Vauchi_RecoveryProof_v3")`, the
+plain postcard and the sealed bytes;
+`recovery_proof_vector_opens_under_its_old_key_and_not_another` opens
+it under the old key, by hand from the recorded key, and not under
+another). The v6 entry is produced with the production Argon2id
 parameters; the test that imports it through the app's own function
 runs only in builds that carry them
 (`backup_v6_vector_imports_with_production_argon2id_and_refuses_a_wrong_password`),

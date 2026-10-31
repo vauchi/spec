@@ -7,6 +7,13 @@ Each spec tag maps to the Core commit it was extracted from.
 
 ## Unreleased
 
+- Social Recovery B3: the stored proof is sealed to the old key, a
+  33-byte plain header (version 3, `new_pk`) and an encrypted body; the
+  relay reads the header only and no longer checks an old key against
+  the slot. The threat model's relay row and the plain-proof note
+  follow; the `recovery_proof` vector is added (vauchi/private#936,
+  core and relay `issue/936`). The daily rotation of the lookup hash is
+  vauchi/private#998.
 - Card Update and Sync D: fetch padding is deterministic per identity and
   day (vauchi/private#946 part 1, core `issue/946`); the chapter states
   the former defect and what remains, the yesterday-token link between
