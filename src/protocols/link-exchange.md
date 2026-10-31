@@ -112,7 +112,7 @@ fills it. The relay only serves a gate that holds two slots (A6), so
 without the presence deposit the initiator could never read the
 responder's key.
 
-**A4. Responder key agreement** (`responder_respond_with_card_bytes`).
+**A4. Responder key agreement.**
 The responder MUST generate a fresh ephemeral X25519 key pair, compute
 `ss = X25519(sk_r, pk_i)`, and MUST reject a non-contributory result
 (`was_contributory()` false, a small-order `pk_i`). From `ss` both
@@ -166,9 +166,8 @@ two slots, issues `GET(G, own slot)` and decrypts the returned blob
 with `K_card`. A failed decryption is a terminal failure
 (`DecryptError`), never a retry with another key.
 
-**A9. Card payload v2** (`serialize_card_payload_v2`,
-`parse_card_payload_versioned`). Each side's payload is one byte
-`0x02` followed by JSON:
+**A9. Card payload v2.** Each side's payload is one byte `0x02`
+followed by JSON:
 
 ```text
 { "identity_pubkey": [32 B], "x3dh_pubkey": [32 B],
