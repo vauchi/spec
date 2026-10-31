@@ -13,7 +13,9 @@ Each spec tag maps to the Core commit it was extracted from.
   validated, the guardian token under the voucher signature as format 3
   with format 2 refused, a 10-minute future skew on claims and vouchers,
   and the old-key voucher refused while collecting (vauchi/private#930,
-  core `issue/930`). The #930 defect bullet is gone.
+  core `issue/930`). The #930 defect bullet is gone. Kani harnesses
+  for the voucher and token parsers, the time bounds and one byte of
+  real Shamir arithmetic are named (vauchi/private#937).
 - Relay A7: the purge body carries no `recipient_id`; the relay erases
   the mailbox addressed by the verified signing key, checks every
   signature with dalek `verify_strict`, and lower-cases the hex ids of

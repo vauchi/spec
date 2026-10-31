@@ -79,9 +79,12 @@ Each shard is serialized as
 
 The ceremony id is random per backup and ties shares to one file.
 Kani harnesses cover interpolation with the field multiplication
-stubbed, one byte's recovery with the interpolation stubbed, and the
-refusal of more shares than guardians
-(`interpolation_never_panics_and_refuses_a_zero_or_repeated_x`,
+stubbed, one byte's recovery with the interpolation stubbed, the
+refusal of more shares than guardians, and one byte through the real
+arithmetic: a degree-one polynomial evaluated at two points and
+interpolated back
+(`one_byte_split_then_interpolated_with_real_field_arithmetic_returns_the_secret`,
+`interpolation_never_panics_and_refuses_a_zero_or_repeated_x`,
 `recover_byte_never_panics`,
 `reconstruct_refuses_more_shares_than_guardians`); unit tests check
 the field multiplication against an independent reference.
@@ -209,7 +212,12 @@ forgery that would stretch every age bound, not a slow clock
 recovery that starts late gets less than 96 h, and a recovering device
 MAY drop its oldest vouchers to keep the rest inside the span. The
 parser takes exactly 73 bytes and never panics
-(`recovery_claim_parse_never_panics_and_reads_each_field_at_its_offset`).
+(`recovery_claim_parse_never_panics_and_reads_each_field_at_its_offset`);
+Kani proves the same of a contact voucher and a guardian token, and
+that the age and skew bounds are exact with no overflow
+(`recovery_voucher_parse_accepts_exactly_a_contact_voucher`,
+`guardian_token_parse_accepts_exactly_one_token`,
+`recovery_time_bounds_are_exact_and_never_overflow`, vauchi/private#937).
 
 A recovering device keeps one claim in progress. Showing the same
 `old_pk` again MUST resume that claim and its vouchers while the claim
