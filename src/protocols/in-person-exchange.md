@@ -401,7 +401,10 @@ version 0x04 (`InvalidProtocolVersion`); `id_S` not our own
 (`SelfExchange`); `id_S` equals the pinned identity, if one is pinned
 (`IdentityMismatch`); `x_S` equals the pinned exchange key, if one is
 pinned (`ExchangeKeyMismatch`); `echo` equals the required nonce, if
-one is required (`OobNonceMismatch`); `now - t_S ≤ 60` with saturating
+one is required (`OobNonceMismatch`), and is not the echo of an offer
+this responder already accepted, remembered across resets for the life
+of the session (`OobNonceReplayed`, ADR-053 single use,
+vauchi/private#892); `now - t_S ≤ 60` with saturating
 subtraction (`BleExpired`); `exchange_id = SHA-256(id_S || e_S)` not
 already completed. Then the responder derives `SK` (B6), encrypts its
 card with AAD `id_D || id_S || t_D`, computes `c_D = SHA-256(ciphertext)`
@@ -531,6 +534,8 @@ app clears every Glance value when the exchange screen is left.
 - Wrong identity, wrong exchange key, missing or wrong nonce echo:
   `IdentityMismatch`, `ExchangeKeyMismatch`, `OobNonceMismatch`,
   before any key is derived.
+- Nonce echo already spent by an accepted offer: `OobNonceReplayed`,
+  likewise before any key is derived.
 - Offer or ack older than 60 s, our own session older than 60 s:
   `BleExpired`.
 - Commitment that does not match the ciphertext, or a reveal that
@@ -556,10 +561,12 @@ app clears every Glance value when the exchange screen is left.
   to pin; it requires the nonce echo, which proves the connector read
   the QR (`test_responder_rejects_wrong_oob_nonce_echo`). The echo
   travels in the clear in the KeyOffer, so a radio observer of a
-  legitimate offer could race a replay of it; ADR-053 records this and
-  requires single-use nonces, which the code does not enforce yet
-  (vauchi/private#892). The displayer accepts any offer with the right
-  echo until its exchange screen is left: the app generates the QR and
+  legitimate offer could replay it; ADR-053 requires single-use nonces,
+  and the displayer refuses a second offer echoing the nonce it already
+  accepted, across resets, for the life of the session
+  (`a_second_key_offer_with_the_same_echo_is_refused`,
+  vauchi/private#892). Until that first offer it accepts any offer with
+  the right echo while its exchange screen is up: the app generates the QR and
   its nonce once per screen entry and clears them on exit, and the only
   time check is B5's on `t_S`, a timestamp the connector chooses and
   nobody signs. The QR's 60-second window is enforced only by the

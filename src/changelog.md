@@ -7,6 +7,10 @@ Each spec tag maps to the Core commit it was extracted from.
 
 ## Unreleased
 
+- In-Person Exchange B5: the Glance displayer spends its OOB nonce on
+  the first accepted KeyOffer and refuses a replay or a second scanner
+  with `OobNonceReplayed` (vauchi/private#892, core `issue/892`); the
+  "not enforced yet" sentence is gone.
 - Social Recovery A4, B1 to B3: at most nine recovery-trusted contacts
   (vauchi/private#929, core `issue/929`); exact-length claim, voucher
   and proof parsers, the proof at version 2 only, a threshold of 1 to 9
