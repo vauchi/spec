@@ -11,6 +11,12 @@ Each spec tag maps to the Core commit it was extracted from.
   the first accepted KeyOffer and refuses a replay or a second scanner
   with `OobNonceReplayed` (vauchi/private#892, core `issue/892`); the
   "not enforced yet" sentence is gone.
+- In-Person Exchange A6, A7 and the Glance notes: one side emits the
+  audio challenge first, a confirmed proximity is not lowered, the
+  contact's exchange time is the session clock's, the QR contact is a
+  placeholder named after the peer's QR, and a Glance displayer's own
+  60-second window closes (vauchi/private#948, core `issue/948`). The
+  three #948 defect sentences are gone.
 - Social Recovery A4, B1 to B3: at most nine recovery-trusted contacts
   (vauchi/private#929, core `issue/929`); exact-length claim, voucher
   and proof parsers, the proof at version 2 only, a threshold of 1 to 9

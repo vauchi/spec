@@ -159,26 +159,33 @@ one side equals `their_token` on the other. Section D uses them.
 **A6. Proximity.** After key agreement the session runs its proximity
 verifier and, when it holds the peer's audio challenge, emits
 `AudioEmitChallenge` (the peer's 16-byte challenge as FSK samples) and
-`AudioListenForResponse` (5 000 ms). The order is meant to differ by
-role, the scanner emitting first and the displayer listening first, but
-`emit_proximity_commands` sets its initiator flag from the same check
-that guards the block, and in a mutual QR both sides hold the peer's
-challenge: both emit first, then listen (vauchi/private#948). The
+`AudioListenForResponse` (5 000 ms). Exactly one side emits first: a
+one-way scanner, which alone holds the peer's challenge, and in a
+mutual QR, where both do, the side with the smaller identity key, as
+for the escrow role
+(`in_a_mutual_qr_exchange_one_side_emits_first_and_the_other_listens_first`,
+vauchi/private#948). The
 session does not decode audio itself; a
 shell reports `ProximityCheckCompleted { confidence }`. Confidence is
 one of `High` (audio or a physical channel), `Medium` (the user
 confirmed by hand; `ManualConfirmationVerifier`), `Low` (a check
-failed) or `Unknown`. NFC and USB sessions set `High` without a check:
+failed) or `Unknown`. The automatic baseline the session runs after
+key agreement never lowers a confidence the shell already confirmed
+(`a_confirmed_medium_proximity_is_not_lowered_by_the_key_agreement_check`).
+NFC and USB sessions set `High` without a check:
 the tap or the cable is the proof.
 
 **A7. Completion** (`handle_complete_exchange`). The session MUST be in
 `AwaitingCardExchange`. The contact is created with the peer's identity
 key, the card the shell supplies, `K` as the shared key, the proximity
 confidence, the transport and trust metrics `(transport, confidence,
-timestamp)`. The contact's `exchange_timestamp` SHOULD be the time of
-the exchange, but `handle_complete_exchange` passes 0, so a `Pending`
-contact from the session reads as `Unreciprocated` at once (D;
-vauchi/private#948). The relay
+timestamp)`. The contact's `exchange_timestamp` is the session clock's
+time at completion, for every transport
+(`a_qr_session_stores_the_exchange_timestamp`, vauchi/private#948), so
+the 7-day reciprocity rule (D) counts from the exchange. The QR carries
+no card: the app completes a QR exchange with a placeholder card named
+after the peer's QR until their card arrives over the relay
+(`qr_auto_advance_names_the_contact_after_the_peer_qr`). The relay
 URL from the peer's QR is stored as the
 contact's relay URL and copied onto each pending update as
 `target_relay_url`, but no shipped path dispatches by it: every send
@@ -405,7 +412,9 @@ one is required (`OobNonceMismatch`), and is not the echo of an offer
 this responder already accepted, remembered across resets for the life
 of the session (`OobNonceReplayed`, ADR-053 single use,
 vauchi/private#892); `now - t_S ≤ 60` with saturating
-subtraction (`BleExpired`); `exchange_id = SHA-256(id_S || e_S)` not
+subtraction, and, when a nonce is required, `now - t_D ≤ 60` on the
+responder's own stamp, so the connector's unsigned `t_S` cannot reopen
+a Glance QR's window (`BleExpired`, vauchi/private#948); `exchange_id = SHA-256(id_S || e_S)` not
 already completed. Then the responder derives `SK` (B6), encrypts its
 card with AAD `id_D || id_S || t_D`, computes `c_D = SHA-256(ciphertext)`
 and answers with the 153-byte KeyAck
@@ -567,10 +576,11 @@ app clears every Glance value when the exchange screen is left.
   (`a_second_key_offer_with_the_same_echo_is_refused`,
   vauchi/private#892). Until that first offer it accepts any offer with
   the right echo while its exchange screen is up: the app generates the QR and
-  its nonce once per screen entry and clears them on exit, and the only
-  time check is B5's on `t_S`, a timestamp the connector chooses and
-  nobody signs. The QR's 60-second window is enforced only by the
-  scanner (vauchi/private#948).
+  its nonce once per screen entry and clears them on exit, and it
+  refuses any offer once its own session is older than 60 s, whatever
+  `t_S` the connector chose, so the QR's window closes on both sides
+  (`a_glance_displayer_refuses_an_offer_after_its_own_sixty_second_window`,
+  vauchi/private#948).
 - **The displayer does not bind the scanner.** `ble_handshake.spthy`
   states this as `displayer_binds_the_scanner` and finds it falsified:
   a party that echoes the nonce is accepted under any identity, and the
