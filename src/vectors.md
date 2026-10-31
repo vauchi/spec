@@ -51,8 +51,9 @@ confirmation escrow gate and slots
 `link_exchange` is one link exchange of Link and Relay-Mediated
 Exchange A1 to A10: the link built from a fixed nonce and ephemeral
 key, the three nonce-derived slots, the escrow gate, slots and card
-key from the responder's DH, the signed v2 card payload for a card
-with a fixed id, and the shared key the two fresh X3DH keys give
+key from the responder's DH, the card payload for a card with a fixed
+id signed for the link's nonce and both ephemeral keys, and the shared
+key the two fresh X3DH keys give
 (`link_exchange_vector_matches_the_url_slots_escrow_payload_and_shared_key`,
 which also opens a card sealed by `EscrowKeys` with the recorded card
 key and refuses the payload with one flipped bit).

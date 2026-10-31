@@ -65,7 +65,7 @@ Initiator                        Relay                         Responder
 
 `n` is the link's nonce, `pk_i` and `pk_r` the two sides' ephemeral
 X25519 public keys, `G`, `S_i`, `S_r` and `K_card` the escrow values
-derived below, and `payload_*` the signed v2 card payloads.
+derived below, and `payload_*` the signed card payloads (A9).
 
 ### Normative operations
 
@@ -112,7 +112,7 @@ fills it. The relay only serves a gate that holds two slots (A6), so
 without the presence deposit the initiator could never read the
 responder's key.
 
-**A4. Responder key agreement.**
+**A4. Responder key agreement** (`responder_respond_with_signed_card`).
 The responder MUST generate a fresh ephemeral X25519 key pair, compute
 `ss = X25519(sk_r, pk_i)`, and MUST reject a non-contributory result
 (`was_contributory()` false, a small-order `pk_i`). From `ss` both
@@ -126,7 +126,9 @@ K_card    = HKDF(ss, "vauchi-escrow-card-key-v1")
 ```
 
 (`EscrowKeys::derive`). The initiator uses `S_i` as its own slot and
-`S_r` as the peer's; the responder the reverse.
+`S_r` as the peer's; the responder the reverse. The exchange binding
+is `(n, pk_i, pk_r)`; the responder knows it once it has generated its
+key, and MUST sign its payload for it (A9).
 
 **A5. Responder deposits.** The responder MUST deposit, in this order,
 `pk_r` in `(handshake_gate, epk_slot)` and its encrypted card
@@ -134,7 +136,12 @@ K_card    = HKDF(ss, "vauchi-escrow-card-key-v1")
 `Enc` is XChaCha20-Poly1305 in Core's tagged format (`0x02 || nonce
 || ciphertext || tag`, `crypto/encryption.rs`). Both deposits are
 dispatched together, so by the time the initiator sees the handshake
-gate full the card is normally already waiting (A8).
+gate full the card is normally already waiting (A8). When the `epk`
+deposit is answered `AlreadyExists` the link was opened before, by
+someone else or by this user: the responder MUST end the exchange as
+`link_already_used` and MUST NOT deposit its card. Each escrow slot is
+written once, so the client reports `AlreadyExists` as a failure
+(`slot_taken`, `network/escrow_client.rs`), never as a stored deposit.
 
 **A6. Relay escrow rules** (`relay/src/escrow.rs`,
 `vauchi-protocol/src/escrow.rs`). A gate holds exactly two slots. A
@@ -157,8 +164,10 @@ responder's key from its presence slot and Core turns the blob into
 `Event::LinkOpened { peer_public_key }`
 (`api/vauchi/link_exchange.rs`). The initiator MUST check the key is
 32 bytes, compute `ss = X25519(sk_i, pk_r)`, reject a non-contributory
-result, derive the escrow values as in A4 with the initiator role,
-encrypt its own card payload with `K_card` and deposit it in
+result, derive the escrow values as in A4 with the initiator role, and
+only then sign its own card payload for `(n, pk_i, pk_r)`: the binding
+contains `pk_r`, so the payload cannot be signed when the link is
+created. It encrypts the payload with `K_card` and deposits it in
 `(G, S_i)`.
 
 **A8. Retrieval.** Each side polls `COUNT(G)` and, when the gate holds
@@ -166,25 +175,35 @@ two slots, issues `GET(G, own slot)` and decrypts the returned blob
 with `K_card`. A failed decryption is a terminal failure
 (`DecryptError`), never a retry with another key.
 
-**A9. Card payload v2.** Each side's payload is one byte `0x02`
-followed by JSON:
+**A9. Card payload** (`serialize_link_card_payload`,
+`parse_link_card_payload`). Each side's payload is one byte `0x03`,
+the 64-byte signature, and a JSON body:
 
 ```text
-{ "identity_pubkey": [32 B], "x3dh_pubkey": [32 B],
-  "relay_url": "...", "signature": [64 B], "card": <ContactCard> }
+0x03 || signature[64] || { "identity_pubkey": [32 B], "x3dh_pubkey": [32 B],
+                           "relay_url": "...", "card": <ContactCard> }
 ```
 
 `x3dh_pubkey` MUST be a fresh X25519 key generated for this exchange
 (`X3DHKeyPair::generate()` in `start_link_exchange` and
 `accept_link_exchange_payload`). `signature` is Ed25519 by the
-identity key over `"vauchi-link-bootstrap-v2" || x3dh_pubkey ||
-relay_url`; the fixed-length key precedes the variable URL, so no
-length prefix is needed. A parser MUST verify the signature against
-the embedded `identity_pubkey` and MUST reject any other version byte,
-an empty payload, or a signature that is not 64 bytes.
+identity key over
+
+```text
+"vauchi-link-bootstrap-v3" || n || pk_i || pk_r || body
+```
+
+where `body` is the exact JSON bytes that follow the signature. The
+three fixed-length fields precede the only variable one, so no length
+prefix is needed, and signing the bytes as sent needs no canonical
+re-serialisation. A parser MUST verify the signature against the
+embedded `identity_pubkey` and its own side's binding, and MUST reject
+any other version byte (v1 and v2 are retired), an empty payload, and
+a payload shorter than its signature.
 
 **A10. Completion** (`complete_link_exchange`). The receiving side
-MUST reject a payload whose identity key is its own
+MUST verify the payload for the binding of the exchange it took part
+in (A9), and MUST reject a payload whose identity key is its own
 (`SelfExchange`). If a contact with that identity already exists the
 exchange is idempotent: the existing contact and its ratchet are kept.
 Otherwise the contact limit is enforced, and the shared key is
@@ -213,8 +232,9 @@ advances.
 
 ### State machine
 
-Initiator (`LinkInitiatorState`): `Polling` → (`LinkOpened`, keys
-derived, card deposited) → `Retrieving` → (`RelayEscrowBlobReceived`,
+Initiator (`LinkInitiatorState`): `Polling` → (`LinkOpened`, keys and
+binding derived) → `AwaitingCard` → (card signed for the binding,
+`deposit_card`) → `Retrieving` → (`RelayEscrowBlobReceived`,
 decrypted) → `Finalized{card_bytes}`. Any state → `Failed(reason)`
 with `PollingTimedOut`, `HandshakeFailed` (bad length or
 non-contributory key), `DecryptError`, `DepositRejected` (any
@@ -223,17 +243,14 @@ states ignore every further event.
 
 Responder (`LinkResponderState`): `Polling` → (`RelayEscrowReady` on
 `G`) → `Retrieving` → `Finalized{card_bytes}`; failures
-`PollingTimedOut`, `DecryptError`, `DepositRejected`, `Cancelled`.
-`DepositRejected` on the responder means the relay refused a request
-on gate `G`: a card over the blob limit, or the relay at capacity. A
-re-open of a link, or an open after someone else, is not reported:
-the `epk` deposit returns `AlreadyExists`, which the client counts as
-stored (`network/escrow_client.rs`), and the session ends
-`PollingTimedOut` on an escrow gate the initiator never joins (defect
-vauchi/private#942).
+`PollingTimedOut`, `DecryptError`, `DepositRejected`,
+`LinkAlreadyUsed`, `Cancelled`. `LinkAlreadyUsed` means the `epk`
+deposit found its slot taken (A5). `DepositRejected` means the relay
+refused any other request on the handshake gate or on `G`: a card over
+the blob limit, or the relay at capacity.
 
 Both sessions ignore ready and blob events for gates they do not own;
-only the responder also filters `RelayEscrowFailed` to its gate. Both
+only the responder also filters `RelayEscrowFailed` to its two gates. Both
 persist nothing of the escrow beyond the session: the only durable
 result is the contact created in A10.
 
@@ -246,13 +263,13 @@ result is the contact created in A10.
 - Small-order peer key: `NonContributoryDh`, terminal.
 - Relay answers `BlobTooLarge`, `GateFull` (including capacity) and
   `NotFound`, and a blob that is not valid base64: `DepositRejected`,
-  terminal (on the responder only for gate `G`). `AlreadyExists`
-  counts as a successful deposit.
+  terminal (on the responder only for its two gates). `AlreadyExists`
+  on the responder's `epk` deposit: `LinkAlreadyUsed`, terminal.
 - Unknown or expired gate: the relay answers `NotFound`, which ends
   the session `DepositRejected`. With a 7-day TTL against a 300 s
   session this happens only when the relay loses its in-memory store.
-- Signature failure or wrong version on the payload: completion
-  fails; no contact is created.
+- Signature failure, a payload signed for another exchange, or a
+  wrong version: completion fails; no contact is created.
 - Self-exchange: refused before any write.
 
 ### Security considerations
@@ -278,13 +295,18 @@ result is the contact created in A10.
   and card deposits go back to back, and the initiator's GET of
   `pk_r`, PUT of its card and COUNT of `G` happen in one advance. The
   relay never sees a private key, the shared secret or a card.
-- **What the card payload binds.** The identity signature covers
-  `"vauchi-link-bootstrap-v2" || x3dh_pubkey || relay_url` only: not
-  the card and not this exchange. A payload whose card is rewritten
-  still verifies (defect vauchi/private#942). The relay cannot open a
-  payload, so it cannot substitute the X3DH key or the routing address
-  inside one; and the shared key depends on both fresh X3DH keys, so a
-  later compromise of either identity key does not reveal it.
+- **What the card payload binds.** The identity signature covers the
+  whole body (identity key, card, X3DH key, relay URL) and the
+  exchange `(n, pk_i, pk_r)`. A rewritten card fails verification, and
+  so does a payload replayed from another link or relayed by someone
+  who swapped `pk` in a shared link: each side then holds a different
+  binding, so neither accepts the card the other signed (fixed in
+  vauchi/private#942; v2 signed only `x3dh_pubkey || relay_url`). The
+  relay cannot open a payload, so it cannot substitute anything inside
+  one; and the shared key depends on both fresh X3DH keys, so a later
+  compromise of either identity key does not reveal it. The binding
+  does not say who opened the link: a swapper can still present its
+  own identity and become the contact, which is S9.
 - **What is not bound.** The escrow shared secret `ss` authenticates
   nobody: it comes from two ephemeral keys and only gates the escrow.
   Authentication rests entirely on the signed payload, which is why a
@@ -300,7 +322,7 @@ result is the contact created in A10.
 `link_exchange` in [Test Vectors](../vectors.md) is one exchange end
 to end: the link of A1 from a fixed nonce and ephemeral key, the
 three slots of A2, the escrow gate, slots and card key of A4 under
-both roles, the signed v2 payload of A9 byte for byte, and the shared
+both roles, the signed payload of A9 byte for byte, and the shared
 key of A10 from both sides.
 
 ---
