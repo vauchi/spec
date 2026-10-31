@@ -79,12 +79,12 @@ Each shard is serialized as
 
 The ceremony id is random per backup and ties shares to one file.
 Kani harnesses cover interpolation with the field multiplication
-stubbed, one byte's recovery with the interpolation stubbed, the
-refusal of more shares than guardians, and one byte through the real
-arithmetic: a degree-one polynomial evaluated at two points and
-interpolated back
-(`one_byte_split_then_interpolated_with_real_field_arithmetic_returns_the_secret`,
-`interpolation_never_panics_and_refuses_a_zero_or_repeated_x`,
+stubbed, one byte's recovery with the interpolation stubbed, and the
+refusal of more shares than guardians; one byte through the real
+arithmetic did not finish in 10 minutes, so the exhaustive `gf_mul`
+and `gf_inv` unit tests stay the evidence for the field
+(vauchi/private#937)
+(`interpolation_never_panics_and_refuses_a_zero_or_repeated_x`,
 `recover_byte_never_panics`,
 `reconstruct_refuses_more_shares_than_guardians`); unit tests check
 the field multiplication against an independent reference.
