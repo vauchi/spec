@@ -7,6 +7,12 @@ Each spec tag maps to the Core commit it was extracted from.
 
 ## Unreleased
 
+- Relay A7: the purge body carries no `recipient_id`; the relay erases
+  the mailbox addressed by the verified signing key, checks every
+  signature with dalek `verify_strict`, and lower-cases the hex ids of
+  send, ack and fetch after validating them, before the rate-limit
+  token is spent (vauchi/private#944, relay `issue/944`, core
+  `issue/944`). The three #944 defect sentences are gone.
 - Social Recovery B3: the stored proof is sealed to the old key, a
   33-byte plain header (version 3, `new_pk`) and an encrypted body; the
   relay reads the header only and no longer checks an old key against

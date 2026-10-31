@@ -99,11 +99,14 @@ limit for `recipient_id` is exhausted (`429`, `Retry-After`), when
 `recipient_id` is not 64 hex characters, when `ciphertext` is not
 base64, or when the mailbox would exceed its quota: by default 1 000
 blobs or 50 MB per recipient token (`429 quota exceeded`; zero means
-unlimited). Hex of either case is accepted and not normalised, so
-`AB…` and `ab…` are different mailboxes with different rate-limit
-keys, and the rate-limit token is spent before `recipient_id` is
-validated (vauchi/private#944). It stores `(uuid, recipient_id,
-bytes, created_at, hop_count = 0, origin_hint)` and answers
+unlimited). The relay validates `recipient_id` before it spends a
+rate-limit token and lower-cases it, as it lower-cases the ids of
+`ack` and `fetch`, so `AB…` and `ab…` are one mailbox with one
+rate-limit key (`a_send_to_an_upper_case_token_lands_in_the_lower_case_mailbox`,
+`an_invalid_recipient_id_spends_no_rate_limit_token`; before
+vauchi/private#944 they were two, and the token was spent first). It
+stores `(uuid, recipient_id, bytes, created_at, hop_count = 0,
+origin_hint)` and answers
 `{ status: "ok", blob_id }`. The relay does not check the
 ciphertext's shape; what it stores is whatever the client sent, and
 the sender's address is not part of the record. The rate limiter is a
@@ -154,25 +157,28 @@ peer keeps its original age. Tests:
 `retention_keeps_day_100_data_across_restart_and_ack_removes_only_that_blob`,
 `retention_expires_at_the_exact_boundary_and_preserves_a_later_envelope`.
 
-**A7. Purge** (`handle_purge_logic`). Body `{ recipient_id,
-public_key, purge_token(32), signature, timestamp,
-erase_guardian_set }`. The relay MUST verify the Ed25519 signature by
-`public_key` over `public_key || purge_token || timestamp_be [||
-"erase-guardian-set"]` (`verify_purge_ed25519`), refuse a timestamp
-more than 60 s from its clock and a replayed nonce, and only then
-delete every blob and forwarding hint stored under `recipient_id`,
-the recovery proofs owned by that key and, when asked, the guardian
-set keyed by `SHA-256(public_key || "guardians")`. Core sends
-`recipient_id = hex(public_key)`, but the relay neither signs nor
-binds `recipient_id` to the key: the owned recovery proofs and the
-guardian set are the only key-bound effects, and any key pair can
-empty any mailbox whose token it holds (vauchi/private#944). The
-relay verifies with aws-lc's Ed25519, which accepted the identity
-point as a key with `S = 0` for any message in a test, where Core's
-`verify_strict` refuses it (vauchi/private#944). This is the one
-route where an identity key reaches the relay, by design: deletion is
-the identity's own signed act (Keys and Cards, C3; the hard-shred lane
-`hard_shred_after_grace_fanout_over_outer_hop_only`).
+**A7. Purge** (`handle_purge_logic`). Body `{ public_key,
+purge_token(32), signature, timestamp, erase_guardian_set }`. The
+relay MUST verify the Ed25519 signature by `public_key` over
+`public_key || purge_token || timestamp_be [|| "erase-guardian-set"]`
+(`verify_purge_ed25519`), refuse a timestamp more than 60 s from its
+clock and a replayed nonce, and only then delete every blob and
+forwarding hint stored under `hex(public_key)`, the recovery proofs
+owned by that key and, when asked, the guardian set keyed by
+`SHA-256(public_key || "guardians")`. The body names no mailbox: every
+effect of a purge is bound to the verified key, and an old client's
+`recipient_id` is read past
+(`a_purge_empties_the_signing_keys_mailbox_and_not_the_one_its_body_names`).
+Before vauchi/private#944 the body's `recipient_id` chose the mailbox,
+so any key pair could empty any mailbox whose token it held. Every
+signature the relay checks, here and in Social Recovery A4 and B3,
+goes through dalek `verify_strict`, as Core's do: aws-lc's verifier
+accepted the identity point as a key with `S = 0` for any message
+(`test_verify_purge_ed25519_rejects_the_identity_point_as_a_key` and
+its guardian and recovery-owner twins; vauchi/private#944). This is
+the one route where an identity key reaches the relay, by design:
+deletion is the identity's own signed act (Keys and Cards, C3; the
+hard-shred lane `hard_shred_after_grace_fanout_over_outer_hop_only`).
 
 **A8. Response padding** (`padding.rs`). Every OHTTP reply is padded
 before encapsulation: a fetch to the smallest rung of 4 KiB, 32 KiB or
@@ -417,9 +423,9 @@ bad inner JSON) reaches the client as a `502` from the outer relay.
   (`a_flooded_mailbox_is_limited_while_another_is_still_served`);
   fetch any token, which yields ciphertext only and removes nothing.
   Sending is already a write by an outsider, and anyone who holds a
-  token can do more: fetch learns its blob ids, ack deletes them one
-  by one, and purge with any key pair empties the mailbox (A7,
-  vauchi/private#944). Resource bounds are open as well, read in the
+  token can do more: fetch learns its blob ids and ack deletes them one
+  by one; a purge empties only the signing key's own mailbox (A7,
+  since vauchi/private#944). Resource bounds are open as well, read in the
   code and not yet exercised (vauchi/private#945): a fetch's page is
   built in memory,
   `max_storage_bytes` only steers federation and is never enforced on
