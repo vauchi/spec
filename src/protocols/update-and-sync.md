@@ -430,10 +430,9 @@ freshness under arbitrary clock changes and withheld messages.
 **E4. Duress.** Under a duress unlock, `record_sync_item` MUST
 replace every item by a cover item of the same length (Keys and Cards,
 F3), so no mutation path journals a real item for a linked device
-(vauchi/private#947). Tag and
-visibility changes journal nothing under duress, where a normal
-session journals an item: no content reaches the linked device, but
-the missing item does show.
+(vauchi/private#947), and a duress session journals an item wherever a
+normal session would, tag and group changes included
+(vauchi/private#1011).
 
 ---
 
