@@ -514,8 +514,12 @@ taken the own-card copy over (F2). Since a duress hash always exists,
 `verify` always runs both Argon2id hashes. The SQLite file is not
 itself encrypted, so what remains readable is each row's shape, and
 the identity row and the own-card copy have the same shape with or
-without a PIN. Decoy contacts and the duress settings, tags and places
-still only have rows for a duress user (vauchi/private#1003). Guessing
+without a PIN. Decoy contacts and the duress session's groups, tags
+and places MUST NOT have rows of their own in the file: they live in
+one `duress_content` row every database has (`storage/duress_content.rs`),
+`Enc_SEK(len || rows || padding)` padded to 4 KB and then to the next
+doubling, sealed empty when there are none. What remains readable is
+that size bucket. Guessing
 the PIN needs the SMK; with it, the seal says whether a PIN is set, and
 a six-digit PIN under Argon2id is about a million guesses offline. The duress PIN defends against a coercer who watches the
 unlock, not one who extracts the database and the keychain, and the
