@@ -427,11 +427,13 @@ backup restoration and concurrent stale cached handles require their
 own analysis; sequences alone do not prove universal convergence or
 freshness under arbitrary clock changes and withheld messages.
 
-**E4. Duress.** Under a duress unlock, `record_sync_item_or_cover`
-replaces an item by a cover item of the same length (Keys and Cards,
-F3). About twenty other call sites journal through `record_sync_item`
-with no duress check. Whether a duress session can reach any of them
-is an open question (vauchi/private#947).
+**E4. Duress.** Under a duress unlock, `record_sync_item` MUST
+replace every item by a cover item of the same length (Keys and Cards,
+F3), so no mutation path journals a real item for a linked device
+(vauchi/private#947). Tag and
+visibility changes journal nothing under duress, where a normal
+session journals an item: no content reaches the linked device, but
+the missing item does show.
 
 ---
 

@@ -134,7 +134,7 @@ Extracted on 2026-10-28 from the security-claims page of vauchi.app/docs, itself
 - **Statement**: Unlocking with the duress PIN opens a decoy; anything sent afterwards has the shape of normal traffic, cover items carry the length and timestamp of the real item they stand for, and applying one changes nothing on a linked device.
 - **If false**: The coercer learns from the app or the traffic that a duress code was used.
 - **Status**: partial
-- **Backed by**: tests `applying_a_cover_item_changes_nothing` and `a_cover_item_has_the_length_and_timestamp_of_the_item_it_stands_for` in `duress_cover_device_sync_tests.rs`; Tamarin `duress_cover.spthy`, a diff model that `test:formal` verifies and falsifies under `-DCOERCER_HOLDS_RATCHET`, the design's limit (not annotated yet). Partial: lengths and timing are outside the symbolic model, and no model covers the linked-device sentence. Whether a duress PIN exists is visible at rest (vauchi/private#947).
+- **Backed by**: tests `applying_a_cover_item_changes_nothing` and `a_cover_item_has_the_length_and_timestamp_of_the_item_it_stands_for` in `duress_cover_device_sync_tests.rs`; Tamarin `duress_cover.spthy`, a diff model that `test:formal` verifies and falsifies under `-DCOERCER_HOLDS_RATCHET`, the design's limit (not annotated yet). Partial: lengths and timing are outside the symbolic model, and no model covers the linked-device sentence. Without the SMK the storage file does not show whether a duress PIN exists (Keys and Cards F1); the duress content tables still do (vauchi/private#1003).
 - **Section**: [keys-and-cards](protocols/keys-and-cards.md)
 
 ## S15. A linked device is a full copy of the identity
