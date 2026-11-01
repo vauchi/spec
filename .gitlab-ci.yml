@@ -89,7 +89,7 @@ lint:markdown:
 # Core stays canonical for the vectors until Core CI verifies against a
 # pinned spec tag (ADR-076, decision 5); until then this fails when the
 # copy here drifts from core main.
-# The three drift checks also run on the nightly schedule, against whatever
+# The four drift checks also run on the nightly schedule, against whatever
 # Core, the relays and e2e have on main that night, so a merge there that
 # invalidates a copy or renames a cited function is found the next morning
 # (vauchi/private#874). Every other job refuses the schedule: on it,

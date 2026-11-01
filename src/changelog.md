@@ -7,6 +7,9 @@ Each spec tag maps to the Core commit it was extracted from.
 
 ## Unreleased
 
+- Conventions and Claims: the end-to-end lane cases carry `@claim: S<n>`
+  since e2e!288, the nightly runs four drift checks, and the wire-format
+  row names the formats still without a schema (vauchi/private#874).
 - Wire Schemas: the relay's `/v2` request and response bodies as a JSON
   Schema generated from `vauchi-protocol`'s types, with the parser's
   bounds written in and one example per type; Core proves each bound
