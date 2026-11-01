@@ -115,8 +115,8 @@ Extracted on 2026-10-28 from the security-claims page of vauchi.app/docs, itself
 - **Attacker**: Someone with the device's storage after the key was wiped.
 - **Statement**: Everything at rest is encrypted under a hierarchy rooted in one storage master key in the platform's secure storage; wiping that key wipes the data, and one identity's keys never open another's.
 - **If false**: A wiped or shredded app still yields its data to forensics.
-- **Status**: partial
-- **Backed by**: tests `test_smk_destruction_makes_data_irrecoverable`, `test_shredding_isolation_across_identities` and `test_fkek_protects_file_keys` in `crypto_shredding_integration_tests.rs`; lane `test:release-rg8`, case `hard_shred_after_grace_fanout_over_outer_hop_only`. Partial: on Android and iOS the key destruction step is incomplete; the fix is in testing.
+- **Status**: shipped
+- **Backed by**: tests `test_smk_destruction_makes_data_irrecoverable`, `test_shredding_isolation_across_identities` and `test_fkek_protects_file_keys` in `crypto_shredding_integration_tests.rs`; lane `test:release-rg8`, case `hard_shred_after_grace_fanout_over_outer_hop_only`; on Android and iOS, the shells' shred tests (ShredDestroysTheStorageKeyTest, ShredDestroysTheStorageKeyTests: a copy of the data taken before a shred no longer opens afterwards, vauchi/private#580).
 - **Section**: [keys-and-cards](protocols/keys-and-cards.md)
 
 ## S13. A backup without its password reveals nothing
