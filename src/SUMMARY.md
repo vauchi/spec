@@ -22,5 +22,6 @@
 # Reference
 
 - [Test Vectors](./vectors.md)
+- [Wire Schemas](./schemas.md)
 - [Disclosure Policy](./disclosure.md)
 - [Changelog](./changelog.md)

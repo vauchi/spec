@@ -111,6 +111,27 @@ check:vectors:
 # Core or the end-to-end repository, or the claim backs nothing
 # (vauchi/private#874). The self-test runs first so a broken check cannot
 # pass silently (CC-27).
+# The wire schema and its examples are Core's artefacts (ADR-076, decision
+# 5): the copy here must equal Core's, and every example must validate
+# against the schema, or the book describes a wire that does not exist.
+# The self-test runs first so a broken validator cannot pass (CC-27).
+check:wire-schema:
+  stage: lint
+  tags: [docker]
+  image: ${CI_DEPENDENCY_PROXY_GROUP_IMAGE_PREFIX}/alpine:3.21
+  needs: []
+  before_script:
+    - apk add --no-cache python3 py3-jsonschema > /dev/null
+  script:
+    - python3 ci/check-wire-schema.py --self-test
+    - wget -qO /tmp/core-schema.json "https://gitlab.com/vauchi/core/-/raw/main/vauchi-protocol/schemas/relay-wire-v2.schema.json"
+    - wget -qO /tmp/core-examples.json "https://gitlab.com/vauchi/core/-/raw/main/vauchi-protocol/schemas/relay-wire-v2-examples.json"
+    - python3 ci/check-wire-schema.py src/schemas/relay-wire-v2.schema.json src/schemas/relay-wire-v2-examples.json --core-schema /tmp/core-schema.json --core-examples /tmp/core-examples.json
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+    - if: $CI_PIPELINE_SOURCE == "schedule"
+
 check:claim-names:
   stage: lint
   tags: [docker]

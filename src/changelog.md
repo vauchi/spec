@@ -7,6 +7,12 @@ Each spec tag maps to the Core commit it was extracted from.
 
 ## Unreleased
 
+- Wire Schemas: the relay's `/v2` request and response bodies as a JSON
+  Schema generated from `vauchi-protocol`'s types, with the parser's
+  bounds written in and one example per type; Core proves each bound
+  against the parser and `check:wire-schema` compares the copy here with
+  Core's and validates the examples (ADR-076 decision 5,
+  vauchi/private#119).
 - In-Person Exchange B5: the Glance displayer spends its OOB nonce on
   the first accepted KeyOffer and refuses a replay or a second scanner
   with `OobNonceReplayed` (vauchi/private#892, core `issue/892`); the

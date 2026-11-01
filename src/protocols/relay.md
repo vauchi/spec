@@ -439,6 +439,15 @@ bad inner JSON) reaches the client as a `502` from the outer relay.
   anchor is the trust root's limit; the rollover chain is how the
   owner moves away from it.
 
+## Wire schema
+
+The JSON bodies of every `/v2` request and response are in
+[Wire Schemas](../schemas.md): generated from `vauchi-protocol`'s types
+with the parser's length and item bounds written in, one example per
+type, compared with Core's copy and validated in CI. The schema states
+shape and bounds; the hex and base64 alphabets, the signature checks and
+the token rules are this chapter's.
+
 ## Vectors
 
 `mailbox_tokens` in [Test Vectors](../vectors.md) covers the tokens

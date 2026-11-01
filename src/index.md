@@ -24,8 +24,10 @@ make those statements true, as the code implements them today.
   it were false, and the test, lemma or lane that backs it. That
   chapter is the invitation: it says where to swing.
 - **Checked.** The [test vectors](vectors.md) are produced by the
-  shipped functions and verified by Core's test suite; CI fails when
-  the copy here differs from Core's.
+  shipped functions and verified by Core's test suite, and the
+  [wire schemas](schemas.md) are generated from the wire types with the
+  parser's bounds proved against it; CI fails when a copy here differs
+  from Core's or an example stops validating.
 - **Honest about absences.** A missing approval step, a two-DH key
   agreement that the code calls X3DH, the relay's view of timing: each
   is written down where it belongs.
