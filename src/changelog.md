@@ -7,6 +7,10 @@ Each spec tag maps to the Core commit it was extracted from.
 
 ## Unreleased
 
+- Conventions: Core's formal job is two jobs, `test:formal-code` for the
+  Kani harnesses and wipe tests and `test:formal-models` for the Tamarin
+  and Quint models, each on the merge requests that touch what it checks
+  (core!2151, vauchi/private#1032).
 - Conventions and Claims: the end-to-end lane cases carry `@claim: S<n>`
   since e2e!288, the nightly runs four drift checks, and the wire-format
   row names the formats still without a schema (vauchi/private#874).
