@@ -208,6 +208,14 @@ delivery and the waiting pieces of the release's sender, and only
 those, in the transaction that advances the ratchet. A guardian with no
 session yet gets no release and keeps what it held.
 
+An owner sends the backup again when what it holds changed: the
+voucher threshold, the own card, a contact's key, card or guardian
+flag, or the groups, compared by a domain-separated SHA-256 of them
+(`refresh_guardian_backup_if_stale`). It sends at most once a day
+after the last send, each send being about 2 MB per guardian, and
+never from a duress session, whose change waits for the next normal
+session (ADR-032).
+
 ### What ships today
 
 `export_guardian_backup_with_shards`, `export_guardian_backup_for_groups`,

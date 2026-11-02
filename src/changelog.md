@@ -7,6 +7,8 @@ Each spec tag maps to the Core commit it was extracted from.
 
 ## Unreleased
 
+- Social Recovery A8: a changed guardian backup is sent again at most
+  once a day, never from a duress session (vauchi/private#796).
 - Social Recovery A8 and Update and Sync B5: taking a guardian out of
   the set sends it a bodyless `0x0c` release, and the guardian forgets
   what that sender left (vauchi/private#796).
