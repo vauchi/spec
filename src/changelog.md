@@ -7,6 +7,11 @@ Each spec tag maps to the Core commit it was extracted from.
 
 ## Unreleased
 
+- Social Recovery, What ships today: each change to the recovery-trusted
+  contacts sends three to nine guardians a fresh guardian backup with
+  their shares, at the voucher threshold capped at the guardian count
+  (vauchi/private#796, D10); guardians do not keep it yet. The A7 names
+  are on Core main since core!2153 and leave `claim-names.pending`.
 - Social Recovery A7 and Update and Sync B5: a guardian backup travels
   to its guardian as `0x0b` ratchet messages of at most 48 KiB, each
   naming its backup, count, index and the delivery's SHA-256, with the

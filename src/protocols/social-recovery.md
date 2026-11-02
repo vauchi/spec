@@ -184,11 +184,14 @@ contact's piece is refused like any of its messages.
 
 `export_guardian_backup_with_shards`, `export_guardian_backup_for_groups`,
 `respond_to_recovery` and `recover_guardian_backup` are Core API with
-tests; the app does not yet export a guardian backup on designation
-nor move shares to guardians automatically (vauchi/private#796, plan
-steps 1 to 3). The pieces of A7 are a codec and a message kind only:
-nothing sends one yet, and a guardian that receives one does not keep
-it yet (plan steps 1c and 1d). The guardian **tokens** of A4 do reach the relay today,
+tests. Each change to the recovery-trusted contacts exports a fresh
+guardian backup when there are three to nine of them
+(`send_guardian_backup`; Shamir needs three shares, so one or two
+guardians get none), split at the voucher threshold capped at the
+guardian count and raised to two, and queues each guardian its sealed
+share with the file in A7 pieces (vauchi/private#796, D10). A guardian
+does not keep the pieces yet, so nothing returns a file to a recovering
+person (plan steps 1d to 3). The guardian **tokens** of A4 do reach the relay today,
 for up to nine recovery-trusted contacts. A tenth makes the set 2 050
 bytes, over the relay's 2 048, and the whole set is refused without
 the person being told (vauchi/private#929).
