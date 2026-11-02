@@ -5,3 +5,5 @@
 # rather than on main: one per line, name first, then the MR that carries
 # it. check-claim-names.sh reports them as PENDING instead of failing, and
 # fails once the name is on main so the line is removed (ratchet).
+split_into_pieces core!2153
+encode_guardian_backup_piece core!2153

@@ -126,6 +126,7 @@ routes it:
 | `0x08` | CEK-wrapped card delta | B4 |
 | `0x09` | cover (duress) | Keys and Cards, F3 |
 | `0x0a` | resync request | B9 |
+| `0x0b` | guardian backup piece | Social Recovery, A7 |
 
 A receiver MUST reject an unknown version byte. All of them travel in
 the same ratchet envelope, but the padding bucket follows the

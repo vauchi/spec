@@ -158,13 +158,37 @@ their sender, so several injected responses with the right metadata
 can displace honest ones from the bounded set and deny the recovery;
 they cannot make a wrong key accepted.
 
+**A7. Delivery in pieces** (`split_into_pieces`, `PieceAssembly`,
+`encode_guardian_backup_piece`). A guardian keeps the owner's
+encrypted file next to its share (vauchi/private#796, D7), but the
+relay caps a request body at 128 KB and a file with avatars runs to
+megabytes. The delivery, of at most the file's 32 MiB cap plus 64 KiB,
+therefore travels as ratchet messages of version `0x0b` (Update and
+Sync, B5), each piece at most 48 KiB:
+
+```text
+backup_id(16) || count(2, BE) || index(2, BE) || SHA-256(delivery)(32) || body
+```
+
+Every body but the last is exactly `48 KiB - 52` bytes, so a
+delivery's size follows from its count. A receiver MUST refuse a
+piece with a count of zero or above the cap, an index not below the
+count, or a body of the wrong length, before anything reads it; it
+MUST take pieces in any order, MUST treat a second copy with the same
+bytes as no change, and MUST refuse a second copy with other bytes, a
+piece of another backup, count or hash, and a completed delivery whose
+SHA-256 differs. The ratchet authenticates the sender; a blocked
+contact's piece is refused like any of its messages.
+
 ### What ships today
 
 `export_guardian_backup_with_shards`, `export_guardian_backup_for_groups`,
 `respond_to_recovery` and `recover_guardian_backup` are Core API with
 tests; the app does not yet export a guardian backup on designation
 nor move shares to guardians automatically (vauchi/private#796, plan
-steps 1 to 3). The guardian **tokens** of A4 do reach the relay today,
+steps 1 to 3). The pieces of A7 are a codec and a message kind only:
+nothing sends one yet, and a guardian that receives one does not keep
+it yet (plan steps 1c and 1d). The guardian **tokens** of A4 do reach the relay today,
 for up to nine recovery-trusted contacts. A tenth makes the set 2 050
 bytes, over the relay's 2 048, and the whole set is refused without
 the person being told (vauchi/private#929).

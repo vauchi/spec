@@ -7,6 +7,11 @@ Each spec tag maps to the Core commit it was extracted from.
 
 ## Unreleased
 
+- Social Recovery A7 and Update and Sync B5: a guardian backup travels
+  to its guardian as `0x0b` ratchet messages of at most 48 KiB, each
+  naming its backup, count, index and the delivery's SHA-256, with the
+  receiver's refusals; nothing sends or keeps one yet
+  (vauchi/private#796, core!2153).
 - Conventions: Core's formal job is two jobs, `test:formal-code` for the
   Kani harnesses and wipe tests and `test:formal-models` for the Tamarin
   and Quint models, each on the merge requests that touch what it checks
