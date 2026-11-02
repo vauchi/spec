@@ -294,8 +294,12 @@ checkpoint advances only after an exhaustive pass.
    numbers from its own storage.
 9. A durable per-contact map orders each field and the display name by
    `(signed timestamp, sender device id, delta version)`. Additions use
-   the field's signed `updated_at`; removals and names use the delta's
-   signed timestamp. Strictly older tuples are skipped. Removal stamps
+   the later of the field's signed `updated_at` and the delta's signed
+   timestamp, so a field shared again after its removal, unchanged and
+   still carrying its old `updated_at`, is applied; removals and names
+   use the delta's signed timestamp. Strictly older tuples are skipped.
+   A held addition stays skipped, since both of its times precede the
+   removal. Removal stamps
    remain as tombstones even after the field disappears. Equal legacy
    tuples have no causal distinction and retain their apply semantics.
    The new CEK is stored even if all card changes were skipped.
