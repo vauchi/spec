@@ -180,6 +180,27 @@ piece of another backup, count or hash, and a completed delivery whose
 SHA-256 differs. The ratchet authenticates the sender; a blocked
 contact's piece is refused like any of its messages.
 
+The delivery the pieces carry (`GuardianDelivery`) is
+
+```text
+created_at(8, BE seconds) || share_len(2, BE) || sealed share || file
+```
+
+with a share of 1 to 1 024 bytes and a non-empty file. `created_at` is
+the owner's time of export; random backup ids and mailbox arrival carry
+no order, and the ratchet authenticates the owner who set it.
+
+**A8. Keeping** (`GuardianBackupStore::keep_piece`). A guardian keeps
+each owner's newest whole delivery, encrypted at rest. It MUST keep a
+piece in the same transaction that advances the ratchet, so a storage
+failure leaves the message on the relay to be fetched again. A whole
+delivery replaces the kept one unless its `created_at` is older; one
+that does not add up (a conflicting copy, a hash mismatch, a delivery
+that does not decode) MUST be dropped without touching the kept one. At
+most two unfinished deliveries wait per owner, and a third evicts the
+oldest, so one contact cannot make a guardian hold more. Removing the
+owner as a contact removes what it left.
+
 ### What ships today
 
 `export_guardian_backup_with_shards`, `export_guardian_backup_for_groups`,
@@ -189,9 +210,10 @@ guardian backup when there are three to nine of them
 (`send_guardian_backup`; Shamir needs three shares, so one or two
 guardians get none), split at the voucher threshold capped at the
 guardian count and raised to two, and queues each guardian its sealed
-share with the file in A7 pieces (vauchi/private#796, D10). A guardian
-does not keep the pieces yet, so nothing returns a file to a recovering
-person (plan steps 1d to 3). The guardian **tokens** of A4 do reach the relay today,
+share with the file in A7 pieces (vauchi/private#796, D10). Guardians
+keep the newest whole delivery (A8), but nothing returns it to a
+recovering person yet (plan steps 2 and 3), and a guardian released
+from the set keeps what it held. The guardian **tokens** of A4 do reach the relay today,
 for up to nine recovery-trusted contacts. A tenth makes the set 2 050
 bytes, over the relay's 2 048, and the whole set is refused without
 the person being told (vauchi/private#929).

@@ -7,6 +7,10 @@ Each spec tag maps to the Core commit it was extracted from.
 
 ## Unreleased
 
+- Social Recovery A7 and A8: the delivery carries the owner's export
+  time ahead of the share, and a guardian keeps each owner's newest
+  whole delivery, in the receive transaction, dropping one that does
+  not add up and holding at most two unfinished (vauchi/private#796).
 - Social Recovery, What ships today: each change to the recovery-trusted
   contacts sends three to nine guardians a fresh guardian backup with
   their shares, at the voucher threshold capped at the guardian count
