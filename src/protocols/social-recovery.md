@@ -201,6 +201,13 @@ most two unfinished deliveries wait per owner, and a third evicts the
 oldest, so one contact cannot make a guardian hold more. Removing the
 owner as a contact removes what it left.
 
+Taking a guardian out of the set sends it a release, a ratchet message
+of version `0x0c` with no body (`encode_guardian_release`), in the same
+change as the new split for the others. A guardian MUST forget the kept
+delivery and the waiting pieces of the release's sender, and only
+those, in the transaction that advances the ratchet. A guardian with no
+session yet gets no release and keeps what it held.
+
 ### What ships today
 
 `export_guardian_backup_with_shards`, `export_guardian_backup_for_groups`,
@@ -211,9 +218,9 @@ guardian backup when there are three to nine of them
 guardians get none), split at the voucher threshold capped at the
 guardian count and raised to two, and queues each guardian its sealed
 share with the file in A7 pieces (vauchi/private#796, D10). Guardians
-keep the newest whole delivery (A8), but nothing returns it to a
-recovering person yet (plan steps 2 and 3), and a guardian released
-from the set keeps what it held. The guardian **tokens** of A4 do reach the relay today,
+keep the newest whole delivery (A8) and forget it on a release, but
+nothing returns it to a recovering person yet (plan steps 2 and 3).
+The guardian **tokens** of A4 do reach the relay today,
 for up to nine recovery-trusted contacts. A tenth makes the set 2 050
 bytes, over the relay's 2 048, and the whole set is refused without
 the person being told (vauchi/private#929).
