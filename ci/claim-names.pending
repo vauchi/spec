@@ -14,3 +14,4 @@ RekeyOffer core!2174
 RekeyAnswer core!2174
 rekey_offer_deliveries core!2174
 rekey_shared_key core!2174
+accept_rekey_offer core!2174

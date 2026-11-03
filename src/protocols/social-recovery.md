@@ -543,10 +543,19 @@ as HKDF-SHA256 of the X25519 secret, salted with `new_pk || contact_pk`
 
 A thief holding the old device has the old shared keys, so it can
 compute these mailboxes and drain them (a relay fetch deletes). That
-delays a rekey; it can neither forge one nor learn the new key. The
-offer and the key are in the code; sending the answer, the contact's
-review and the switch to the new key are not yet (vauchi/private#796
-steps 5 and 6).
+delays a rekey; it can neither forge one nor learn the new key.
+
+A contact keeps an offer only when the new identity signed it and its
+proof opens for one of its contacts and names that same identity; it
+drops anything else without a trace, and every offer in a duress
+session. On accepting (`accept_rekey_offer`) it answers to
+`token(old shared key, new_pk, day)`, the mailbox the new phone polls,
+and in one transaction moves the contact to the new key's id with
+everything that names it, switches it to the new key and shared key,
+and starts a fresh ratchet as responder on `g^j`. The answer goes again
+after a day until the new relationship is in use. The contact's review
+screen and the owner's completion are not in the code yet
+(vauchi/private#796 steps 5c and 6).
 
 What does exist: the recovering user's **identity revocation**,
 `"vauchi-account-revoked-v1" || sender_pk || recipient_pk || timestamp`
