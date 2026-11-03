@@ -216,8 +216,9 @@ the owner's time of export; random backup ids and mailbox arrival carry
 no order, and the ratchet authenticates the owner who set it. The
 second form carries the guardian's token (A4's `GuardianToken`, 1 to 1
 024 bytes): the owner's key naming this guardian, so the guardian's
-in-person vouch can prove it is one of the owner's (B2, C3,
-vauchi/private#796 D19). The owner sends the second form; the first
+in-person vouch can show it is one of the owner's (B2,
+vauchi/private#796 D19). Since the old key signs it, it authorizes no
+rekey (C3). The owner sends the second form; the first
 starts with the creation time's high byte, zero for any real time, and
 still reads, without a token.
 
@@ -559,23 +560,22 @@ A thief holding the old device has the old shared keys, so it can
 compute these mailboxes and drain them (a relay fetch deletes). That
 delays a rekey; it can neither forge one nor learn the new key.
 
-**C3. Accepting** (`take_rekey_offer`, maintainer decision D18). The
-contact is not asked: the recovered contact asks for the rekey, and the
-contact's device accepts it as it arrives when the request is provably
-the recovered contact's, and drops it without a trace otherwise
-(`RecoveryProof::proves_the_recovery_to`). It MUST accept only when
+**C3. Accepting** (`take_rekey_offer`, `take_rekey_offer_authorized`).
+The contact is not asked. Its device MUST accept an offer only with a
+`RecoveryAuthorization` for it, and only the policy guardians' decision
+certificate will grant one (design P15, P18; vauchi/private#796). That
+certificate does not exist yet, so every offer MUST be dropped without a
+trace. Vouchers, guardian tokens (B2, A7) and old-key signatures
+authorize nothing: a thief holding the old device signs tokens and
+continuations, and two legitimate attempts (a new phone lost
+mid-recovery, then another) could each gather a contact's own vouchers,
+so two contacts would follow different successors. Exactly one successor
+per predecessor is a hard requirement (security review, 2026-11-03).
 
-- the new identity signed the offer;
-- the proof opens for one of its exchanged, unblocked contacts, whose key
-  is the proof's `old_pk`, and names the offer's `new_pk`;
-- the proof is well-formed and signed (B3), judged without its 192-hour
-  expiry: it binds the old and the new key, so an old proof cannot serve
-  another, and rekeys may take longer (D21, #959);
-- and at least the device's own verification threshold of vouchers are
-  its own contacts. The threshold is the device's, not the proof's,
-  which the claimant sets. Guardian tokens (B2, A7) MUST NOT count: the
-  old key signs them, and a thief holding the old device can sign them
-  for vouchers of its own making.
+With an authorization the device MUST still check that
+
+- the new identity signed the offer, and it is the authorized one;
+- the authorized old key is an exchanged, unblocked contact's.
 
 Every offer is dropped in a duress session. On accepting it answers to
 `token(old shared key, new_pk, day)`, the mailbox the new phone polls,
@@ -583,14 +583,7 @@ and in one transaction moves the contact to the new key's id with
 everything that names it, switches it to the new key and shared key,
 and starts a fresh ratchet as responder on `g^j`. The answer goes again
 after a day, for at most 14 days, and stops at the first message on the
-new relationship. A proof that moves the contact needs vouchers from
-the device's own contacts, keys the old device does not hold. No
-signature of the old key alone MAY authorize a rekey or a fold
-(security review, 2026-11-03; vauchi/private#796). A guardian policy
-each contact pins at the exchange, which the old device cannot change,
-is the planned way for guardians to authorize a recovery; until it
-exists, a recovery the contact's own contacts did not vouch for fails
-closed.
+new relationship.
 
 **C4. Fold** (`fold_contact_into`, D21). When the contact already has
 one for the new key, because they met in person, the old contact folds
@@ -613,7 +606,7 @@ signed with the old key. Only the old key authorizes it, and a thief
 holding the old device can meet the contact in person under a fresh
 identity, so a receiver MUST decode it and change nothing; the new
 phone sends none. A contact met again in person is offered the rekey
-like any other and folds (C4) only on a proof C3 accepts. An in-person
+like any other and folds (C4) only on an offer C3 accepts. An in-person
 exchange of a contact restored and waiting takes the exchange's shared
 key and ratchet: the one exception to a repeat exchange keeping its
 keys (In-Person Exchange, A8). The contact's key does not change there,
