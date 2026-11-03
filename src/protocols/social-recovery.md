@@ -293,9 +293,9 @@ it back by itself after the meeting's exchange (A5). Turning on a
 contact's recovery trust asks which group it joins once a group
 exists. Restoring the returned backup into the new identity (A10) is
 Core API with tests and has no screen yet; labels come back with their
-members but without the fields they show, which the guardian backup
-does not carry, while each contact's own visibility rules do come
-back. The rekey of the restored contacts (section C) is not shipped.
+members and the fields they show, and each contact with its own
+visibility rules (a backup made before the labels' fields were kept
+restores them showing none). The rekey of the restored contacts (section C) is not shipped.
 The guardian **tokens** of A4 do reach the relay today,
 for up to nine recovery-trusted contacts. A tenth makes the set 2 050
 bytes, over the relay's 2 048, and the whole set is refused without
