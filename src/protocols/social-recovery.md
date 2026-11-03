@@ -509,8 +509,44 @@ under `-DNO_ANSWER_SIGNATURE` and `-DUNBOUND_ANSWER`),
 cannot tell an old contact from a stranger
 (`a_stranger_can_rekey_with_the_recovering_user`); only the contact's
 side is protected, or a new in-person exchange (`-DIN_PERSON`,
-`alice_rekeys_only_with_an_accepting_contact`). None of this is in the
-code yet (vauchi/private#796 steps 4 to 7).
+`alice_rekeys_only_with_an_accepting_contact`).
+
+**C1. Rekey offer** (`RekeyOffer`, `recovery/rekey.rs`). For each
+contact restored from the guardian backup (A10) the new identity makes a
+fresh X25519 exchange key `g^a`, kept encrypted at rest, and sends
+
+```text
+"VRK1" || new_pk(32) || g^a(32) || sig(64) || proof_len(u32 BE) || proof
+sig = Ed25519(new_sk, "vauchi-recovery-rekey-offer" || new_pk || g^a)
+```
+
+with its sealed recovery proof (B3, at most 16 KiB), which it keeps once
+its vouchers complete it. The new identity has the contact's old shared
+key and key from the backup but no ratchet with it, so the offer goes to
+`token(old shared key, contact key, day)`, the mailbox the contact
+already polls for the old relationship (`rekey_offer_deliveries`). It
+goes again a day after the last send, with the same `g^a`, until
+answered; never before a proof exists, and never from a duress session.
+
+**C2. Rekey answer** (`RekeyAnswer`). A contact that accepted the
+proof answers with its own exchange key `g^j`:
+
+```text
+"VRK2" || contact_pk(32) || g^j(32) || g^a(32) || sig(64)
+sig = Ed25519(contact_sk, "vauchi-recovery-rekey-answer" || contact_pk || g^j || g^a)
+```
+
+The owner MUST accept an answer only when `contact_pk` is the contact's
+key from the backup and `g^a` the offer's. Both derive the new shared key
+as HKDF-SHA256 of the X25519 secret, salted with `new_pk || contact_pk`
+(`rekey_shared_key`); the old shared key takes no part.
+
+A thief holding the old device has the old shared keys, so it can
+compute these mailboxes and drain them (a relay fetch deletes). That
+delays a rekey; it can neither forge one nor learn the new key. The
+offer and the key are in the code; sending the answer, the contact's
+review and the switch to the new key are not yet (vauchi/private#796
+steps 5 and 6).
 
 What does exist: the recovering user's **identity revocation**,
 `"vauchi-account-revoked-v1" || sender_pk || recipient_pk || timestamp`

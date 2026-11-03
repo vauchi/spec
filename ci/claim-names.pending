@@ -10,3 +10,7 @@ recover_guardian_backup_with_passphrase core!2174
 rekey_pending_contacts core!2174
 restore_from_returned_backups core!2174
 set_recovery_passphrase core!2174
+RekeyOffer core!2174
+RekeyAnswer core!2174
+rekey_offer_deliveries core!2174
+rekey_shared_key core!2174
