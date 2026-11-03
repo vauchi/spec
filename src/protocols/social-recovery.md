@@ -158,6 +158,12 @@ session MUST answer as a guardian holding nothing (ADR-032), with the
 same refusal as every other. A receiver MUST keep `0x0d` pieces as a
 returned backup and never as a designation (A8).
 
+The hand-back starts by itself (`hand_back_owed`): the completed
+exchange with the claim's new key queues it, and so does every sync
+after, so a guardian that answered the exchange, and has no sending
+chain until the new phone writes first, sends it then. Each vouched
+claim is handed back once; an ordinary exchange hands nothing back.
+
 **A6. Restore** (`recover_guardian_backup`, `recover_from_shards`).
 The recovering identity opens each re-sealed response with its own
 secret, keeps those whose metadata matches the file's header, at most
@@ -241,9 +247,8 @@ guardians get none), split at the voucher threshold capped at the
 guardian count and raised to two, and queues each guardian its sealed
 share with the file in A7 pieces (vauchi/private#796, D10). Guardians
 keep the newest whole delivery (A8), forget it on a release, and hand
-it back in the meeting (A5); restoring the returned backup into the new
-identity, and the screens that lead a guardian through the meeting, are
-not shipped yet (plan steps 2c and 3).
+it back by itself after the meeting's exchange (A5); restoring the
+returned backup into the new identity is not shipped yet (plan step 3).
 The guardian **tokens** of A4 do reach the relay today,
 for up to nine recovery-trusted contacts. A tenth makes the set 2 050
 bytes, over the relay's 2 048, and the whole set is refused without

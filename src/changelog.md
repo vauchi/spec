@@ -7,6 +7,9 @@ Each spec tag maps to the Core commit it was extracted from.
 
 ## Unreleased
 
+- Social Recovery A5: the hand-back starts by itself as the meeting's
+  exchange completes, stays owed until the guardian can send, and goes
+  once (vauchi/private#796).
 - Social Recovery A5 and Update and Sync B5: in the recovery meeting a
   guardian hands its share and the backup back as `0x0d` pieces, only to
   the new key of a claim it vouched for, within 192 hours; a duress
