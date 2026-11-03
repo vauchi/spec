@@ -129,6 +129,7 @@ routes it:
 | `0x0b` | guardian backup piece | Social Recovery, A7 |
 | `0x0c` | guardian release | Social Recovery, A8 |
 | `0x0d` | returned guardian backup piece | Social Recovery, A5 |
+| `0x0e` | recovery continuation | Social Recovery, C5 |
 
 A receiver MUST reject an unknown version byte. All of them travel in
 the same ratchet envelope, but the padding bucket follows the

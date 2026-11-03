@@ -205,7 +205,10 @@ other side is the responder, keyed off its own ephemeral key pair. Both
 sides persist the `is_initiator` flag with the ratchet. Routing every
 in-person completion through this one function is what keeps the two
 sides from both becoming initiator, which produces an undecryptable
-channel.
+channel. A repeat exchange of a contact keeps the shared key and
+ratchet of the first (private#941), except for a contact restored from
+a guardian backup and waiting for its rekey, which has no ratchet on
+this device: it takes the exchange's (Social Recovery, C5).
 
 **A9. Resumption** (`resume_qr`). A shell whose "start" and "complete"
 are separate processes (the CLI) MUST persist the QR and its ephemeral

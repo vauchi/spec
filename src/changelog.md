@@ -7,6 +7,14 @@ Each spec tag maps to the Core commit it was extracted from.
 
 ## Unreleased
 
+- Social Recovery A7, B2, C3 to C6: the guardian delivery carries the
+  guardian's token and an in-person vouch attaches it; a rekey that is
+  provably the recovered contact's is accepted without asking, its proof
+  judged without expiry; a contact met again folds the old one; the
+  in-person continuation, ratchet kind `0x0e` (Update and Sync, B5); the
+  new phone completes with the answer; resends stop after 14 days
+  (vauchi/private#796, D18 to D21).
+
 - Social Recovery A10: the new identity restores the backup its
   guardians handed back, keeping its own key and the contacts it has,
   and marks each restored exchanged contact as waiting for its rekey
