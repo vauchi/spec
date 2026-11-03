@@ -256,8 +256,9 @@ more before it is split into pieces:
 K_p = Argon2id(passphrase, salt)
 ```
 
-The salt is random per passphrase. An empty passphrase MUST be
-refused. The owner keeps the salt and `K_p`, encrypted at rest and
+The salt is random per passphrase. A passphrase weaker than a backup
+password (`validate_password`) MUST be refused: guardians who collude
+hold the backup and every share, so they can guess it offline. The owner keeps the salt and `K_p`, encrypted at rest and
 rekeyed with the storage key, so a refresh seals again without asking;
 setting, changing or clearing it sends the guardians a new backup in
 the same change. Restoring, a backup that starts with the magic needs
