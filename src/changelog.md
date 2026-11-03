@@ -7,6 +7,10 @@ Each spec tag maps to the Core commit it was extracted from.
 
 ## Unreleased
 
+- Social Recovery A9: the owner may set a recovery passphrase; the
+  guardian backup is then sealed once more under an Argon2id key from
+  it, so guardians who collude open nothing without it
+  (vauchi/private#796, D16).
 - Social Recovery A2 and A8: guardian groups are 3 ≤ groups ≤ guardians
   ≤ 9 with no limit on a group's size, chosen by the owner as each
   guardian is added, and the guardian backup is split over them; a

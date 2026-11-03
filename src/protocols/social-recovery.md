@@ -239,11 +239,31 @@ session yet gets no release and keeps what it held.
 
 An owner sends the backup again when what it holds changed: the
 voucher threshold, the own card, a contact's key, card or guardian
-flag, or the groups, compared by a domain-separated SHA-256 of them
-(`refresh_guardian_backup_if_stale`). It sends at most once a day
-after the last send, each send being about 2 MB per guardian, and
-never from a duress session, whose change waits for the next normal
-session (ADR-032).
+flag, the groups, or the passphrase (A9), compared by a
+domain-separated SHA-256 of them (`refresh_guardian_backup_if_stale`).
+It sends at most once a day after the last send, each send being about
+2 MB per guardian, and never from a duress session, whose change waits
+for the next normal session (ADR-032).
+
+**A9. Passphrase** (`set_recovery_passphrase`,
+`backup/passphrase_layer.rs`). The owner MAY set a recovery
+passphrase, so that guardians who collude, one of every group, still
+open nothing without it. The guardian backup of A7 is then sealed once
+more before it is split into pieces:
+
+```text
+"VRP1" || salt(16) || XChaCha20-Poly1305(K_p, guardian backup)
+K_p = Argon2id(passphrase, salt)
+```
+
+The salt is random per passphrase. An empty passphrase MUST be
+refused. The owner keeps the salt and `K_p`, encrypted at rest and
+rekeyed with the storage key, so a refresh seals again without asking;
+setting, changing or clearing it sends the guardians a new backup in
+the same change. Restoring, a backup that starts with the magic needs
+the passphrase (`guardian_backup_needs_passphrase`), and a missing or
+wrong one fails with the same refusal as shares that do not open it
+(`recover_guardian_backup_with_passphrase`).
 
 ### What ships today
 
@@ -252,9 +272,10 @@ session (ADR-032).
 tests. Each change to the recovery-trusted contacts exports a fresh
 guardian backup when there are three to nine of them
 (`send_guardian_backup`; Shamir needs three shares, so one or two
-guardians get none), split at the voucher threshold capped at the
-guardian count and raised to two, and queues each guardian its sealed
-share with the file in A7 pieces (vauchi/private#796, D10). Guardians
+guardians get none), split over the owner's groups (A2), sealed under
+the owner's passphrase when one is set (A9), and queues each guardian
+its sealed share with the file in A7 pieces (vauchi/private#796).
+Guardians
 keep the newest whole delivery (A8), forget it on a release, and hand
 it back by itself after the meeting's exchange (A5); restoring the
 returned backup into the new identity, and the screen where the owner
