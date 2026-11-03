@@ -89,14 +89,18 @@ and `gf_inv` unit tests stay the evidence for the field
 `reconstruct_refuses_more_shares_than_guardians`); unit tests check
 the field multiplication against an independent reference.
 
-**A2. Groups** (`GuardianGroups`, vauchi/private#815). Recovery needs
-one member from each group: a grouped backup is a split with
-`t = n = number of groups`, and a group's share is sealed to each of
-its one to three members. "All of three guardians" is three groups of
-one; groups with spares are at most four; guardians number at most
-nine in all. `one_member_from_each_group_recovers`,
+**A2. Groups** (`GuardianGroups`, vauchi/private#815, #796 D17).
+Recovery needs one member from each group: a grouped backup is a split
+with `t = n = number of groups`, and a group's share is sealed to each
+of its members. The bounds are 3 ≤ groups ≤ guardians ≤ 9, with no
+group empty and no limit on a group's size; "all of three guardians" is
+three groups of one. The owner puts each guardian in a group as it is
+added (`trust_for_recovery_in_group`), and the guardian backup is split
+over those groups; fewer than three groups make no backup.
+`one_member_from_each_group_recovers`,
 `members_of_one_group_count_as_one`,
-`a_whole_group_missing_blocks_recovery`.
+`a_whole_group_missing_blocks_recovery`,
+`a_group_may_hold_more_than_three_and_one_of_each_group_opens`.
 
 **A3. Sealing** (`seal_share_for_guardian`, `sealed_box::seal`). A
 share is sealed to the guardian's X25519 key, obtained from its Ed25519
@@ -219,7 +223,12 @@ that does not add up (a conflicting copy, a hash mismatch, a delivery
 that does not decode) MUST be dropped without touching the kept one. At
 most two unfinished deliveries wait per owner, and a third evicts the
 oldest, so one contact cannot make a guardian hold more. Removing the
-owner as a contact removes what it left.
+owner as a contact removes what it left. A guardian is never told it is
+one, and its database does not say for whom either: the rows carry an
+HMAC of the owner's contact id under a key derived from the storage
+key, never the id, and a storage rekey recomputes it. No single
+guardian can read the file: it holds one share, and opening takes one
+of every group.
 
 Taking a guardian out of the set sends it a release, a ratchet message
 of version `0x0c` with no body (`encode_guardian_release`), in the same
@@ -248,7 +257,8 @@ guardian count and raised to two, and queues each guardian its sealed
 share with the file in A7 pieces (vauchi/private#796, D10). Guardians
 keep the newest whole delivery (A8), forget it on a release, and hand
 it back by itself after the meeting's exchange (A5); restoring the
-returned backup into the new identity is not shipped yet (plan step 3).
+returned backup into the new identity, and the screen where the owner
+picks a guardian's group, are not shipped yet (plan steps 1g and 3).
 The guardian **tokens** of A4 do reach the relay today,
 for up to nine recovery-trusted contacts. A tenth makes the set 2 050
 bytes, over the relay's 2 048, and the whole set is refused without

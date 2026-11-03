@@ -7,6 +7,11 @@ Each spec tag maps to the Core commit it was extracted from.
 
 ## Unreleased
 
+- Social Recovery A2 and A8: guardian groups are 3 ≤ groups ≤ guardians
+  ≤ 9 with no limit on a group's size, chosen by the owner as each
+  guardian is added, and the guardian backup is split over them; a
+  guardian's database keeps an HMAC of its owner, never the id
+  (vauchi/private#796, D15, D17).
 - Social Recovery A5: the hand-back starts by itself as the meeting's
   exchange completes, stays owed until the guardian can send, and goes
   once (vauchi/private#796).
