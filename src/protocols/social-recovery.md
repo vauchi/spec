@@ -571,10 +571,11 @@ the recovered contact's, and drops it without a trace otherwise
 - the proof is well-formed and signed (B3), judged without its 192-hour
   expiry: it binds the old and the new key, so an old proof cannot serve
   another, and rekeys may take longer (D21, #959);
-- and at least the device's own verification threshold of vouchers carry
-  a guardian token the old key signed (B2, A7), or that many vouchers
-  are its own contacts. The threshold is the device's, not the proof's,
-  which the claimant sets.
+- and at least the device's own verification threshold of vouchers are
+  its own contacts. The threshold is the device's, not the proof's,
+  which the claimant sets. Guardian tokens (B2, A7) MUST NOT count: the
+  old key signs them, and a thief holding the old device can sign them
+  for vouchers of its own making.
 
 Every offer is dropped in a duress session. On accepting it answers to
 `token(old shared key, new_pk, day)`, the mailbox the new phone polls,
@@ -582,9 +583,14 @@ and in one transaction moves the contact to the new key's id with
 everything that names it, switches it to the new key and shared key,
 and starts a fresh ratchet as responder on `g^j`. The answer goes again
 after a day, for at most 14 days, and stops at the first message on the
-new relationship. A forged proof needs the old private key (the old
-device unlocked, or guardians who opened the backup without the
-passphrase of A9) or a threshold of the owner's real guardians.
+new relationship. A proof that moves the contact needs vouchers from
+the device's own contacts, keys the old device does not hold. No
+signature of the old key alone MAY authorize a rekey or a fold
+(security review, 2026-11-03; vauchi/private#796). A guardian policy
+each contact pins at the exchange, which the old device cannot change,
+is the planned way for guardians to authorize a recovery; until it
+exists, a recovery the contact's own contacts did not vouch for fails
+closed.
 
 **C4. Fold** (`fold_contact_into`, D21). When the contact already has
 one for the new key, because they met in person, the old contact folds
@@ -595,26 +601,23 @@ has none; favorite, proposal trust and the guardian role stay set when
 either had them; every other reference moves where the new contact has
 no row of its own, and the rest goes with the old contact.
 
-**C5. Continuation** (`RecoveryContinuation`, D20). When the new phone
-and a contact meet in person, before or after the restore, the new
-phone sends over their ratchet, as the ratchet-only kind `0x0e`
-(Update and Sync, B5),
+**C5. Continuation** (`RecoveryContinuation`, D20), withdrawn. The kind
+`0x0e` (Update and Sync, B5) carries
 
 ```text
 old_pk(32) || new_pk(32) || sig(64)
 sig = Ed25519(old_sk, "vauchi-recovery-continue-v1" || old_pk || new_pk)
 ```
 
-signed with the old key from the restored backup's seed, which the new
-phone keeps encrypted at rest. The contact MUST fold its old contact for
-`old_pk` into the sender only when the old key signed it, `new_pk` is
-the sender's key, and the old contact is an exchanged, unblocked one;
-otherwise nothing changes. The meeting is the check, so nobody is asked
-and it works with the contact offline until they meet
-(`recovery_acceptance.spthy`, `-DIN_PERSON`). An in-person exchange of
-a contact restored and waiting, which has no ratchet on the new phone,
-takes the exchange's shared key and ratchet: the one exception to a
-repeat exchange keeping its keys (In-Person Exchange, A8).
+signed with the old key. Only the old key authorizes it, and a thief
+holding the old device can meet the contact in person under a fresh
+identity, so a receiver MUST decode it and change nothing; the new
+phone sends none. A contact met again in person is offered the rekey
+like any other and folds (C4) only on a proof C3 accepts. An in-person
+exchange of a contact restored and waiting takes the exchange's shared
+key and ratchet: the one exception to a repeat exchange keeping its
+keys (In-Person Exchange, A8). The contact's key does not change there,
+so it moves no identity.
 
 **C6. Completing** (`take_rekey_answer`). The new phone takes an
 answer only for a contact still waiting, when the contact's key from
@@ -622,7 +625,7 @@ the backup signed it and it names the exchange key it offered; it then
 switches the contact to the shared key both derive, with a fresh ratchet
 it starts as initiator, ends the wait and sends its card. Offers stop 14
 days after the restore; a contact that has not answered by then stays
-waiting, and meeting it in person settles it (C5).
+waiting.
 
 What does exist: the recovering user's **identity revocation**,
 `"vauchi-account-revoked-v1" || sender_pk || recipient_pk || timestamp`
