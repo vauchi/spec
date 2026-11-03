@@ -7,6 +7,10 @@ Each spec tag maps to the Core commit it was extracted from.
 
 ## Unreleased
 
+- Social Recovery A10: the new identity restores the backup its
+  guardians handed back, keeping its own key and the contacts it has,
+  and marks each restored exchanged contact as waiting for its rekey
+  (vauchi/private#796).
 - Social Recovery A9: the owner may set a recovery passphrase; the
   guardian backup is then sealed once more under an Argon2id key from
   it, so guardians who collude open nothing without it

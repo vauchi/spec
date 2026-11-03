@@ -265,6 +265,18 @@ the passphrase (`guardian_backup_needs_passphrase`), and a missing or
 wrong one fails with the same refusal as shares that do not open it
 (`recover_guardian_backup_with_passphrase`).
 
+**A10. Restore** (`restore_from_returned_backups`). The new identity
+(D6) opens the backups its guardians handed back (A5, A8): it tries
+every returned share on each returned backup, newest first, since
+guardians may hold different deliveries and a share opens only its
+own. It MUST keep its own key. In one transaction it restores the
+backup's contacts, labels and own card; a contact it already has, such
+as a guardian just met again, MUST keep that relationship. Each
+restored exchanged contact is marked as waiting for its rekey
+(`rekey_pending_contacts`, section C), so restoring again restores
+nothing. A share of a group missing, or a missing or wrong passphrase,
+fails with the one refusal of A9.
+
 ### What ships today
 
 `export_guardian_backup_with_shards`, `export_guardian_backup_for_groups`,
@@ -277,9 +289,13 @@ the owner's passphrase when one is set (A9), and queues each guardian
 its sealed share with the file in A7 pieces (vauchi/private#796).
 Guardians
 keep the newest whole delivery (A8), forget it on a release, and hand
-it back by itself after the meeting's exchange (A5); restoring the
-returned backup into the new identity, and the screen where the owner
-picks a guardian's group, are not shipped yet (plan steps 1g and 3).
+it back by itself after the meeting's exchange (A5). Turning on a
+contact's recovery trust asks which group it joins once a group
+exists. Restoring the returned backup into the new identity (A10) is
+Core API with tests and has no screen yet; labels come back with their
+members but without the fields they show, which the guardian backup
+does not carry, while each contact's own visibility rules do come
+back. The rekey of the restored contacts (section C) is not shipped.
 The guardian **tokens** of A4 do reach the relay today,
 for up to nine recovery-trusted contacts. A tenth makes the set 2 050
 bytes, over the relay's 2 048, and the whole set is refused without
