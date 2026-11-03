@@ -6,11 +6,13 @@
 ## Source of truth
 
 The spec describes the code on `main` at the commit a chapter names.
-Prose in this book never outranks the code: when they differ, the
-code is right and the chapter is wrong, and the fix is a change here
-with the issue that tracks the divergence. Chapters are written by
-reading the source, the models and the tests, not from memory of
-earlier prose.
+Descriptive statements are checked against that implementation revision.
+Normative MUST and MUST NOT requirements are authoritative: an
+implementation that violates one is defective unless the maintainer
+explicitly approves a specification change. Track each disagreement in
+an issue, with the implementation evidence and the approved resolution.
+Chapters are written by reading the source, the models and the tests,
+not from memory of earlier prose.
 
 ## Chapter skeleton
 
@@ -31,8 +33,9 @@ Every protocol chapter uses these sections, in this order:
 ## Requirement words
 
 MUST, MUST NOT, SHOULD and MAY are used as in RFC 2119, and they
-describe the shipped code. A MUST the code violates is a defect and
-gets an issue, not a softened sentence.
+define the required behavior. A MUST the code violates is a defect and
+gets an issue; changing the requirement requires explicit maintainer
+approval, recorded with the specification change.
 
 ## Claims
 
@@ -82,8 +85,10 @@ way, and each has, or lacks, a check that fails when it does:
 | A source-file link | None; links name `main` | A file is moved or renamed |
 | A wire format without a schema | The signed OHTTP key record and the escrow messages have none; a schema is added only with the validator that fails on disagreement (ADR-076), as the relay wire's was | Not applicable until one is added |
 
-The direction of truth is Core to spec until Core's CI verifies
-against a pinned spec tag (ADR-076, decision 5).
+The current automated comparisons extract artifacts from Core and check
+the spec against them. Core does not yet verify conformance against a
+pinned spec tag (ADR-076, decision 5). This enforcement gap does not
+override normative requirements.
 
 ## Scope
 
