@@ -292,7 +292,8 @@ keep the newest whole delivery (A8), forget it on a release, and hand
 it back by itself after the meeting's exchange (A5). Turning on a
 contact's recovery trust asks which group it joins once a group
 exists. Restoring the returned backup into the new identity (A10) is
-Core API with tests and has no screen yet; labels come back with their
+Core API with tests, and the new phone's recovery screen offers it
+once a guardian has handed back; labels come back with their
 members and the fields they show, and each contact with its own
 visibility rules (a backup made before the labels' fields were kept
 restores them showing none). The rekey of the restored contacts (section C) is not shipped.
