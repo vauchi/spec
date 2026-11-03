@@ -144,6 +144,20 @@ device in the clear. The re-seal is a separate call from vouching
 (B2) and checks neither a claim nor a token: the guardian decides, in
 person, which key it answers.
 
+The hand-back (`return_guardian_backup`) does check: in the recovery
+meeting the recovering identity and the guardian also run an in-person
+exchange (In-Person Exchange), and over that session the guardian
+returns its share re-sealed to the contact's key together with the
+delivery it keeps (A8), as ratchet messages of version `0x0d` in A7
+pieces. A guardian MUST hand back only to a contact whose key is the
+new key of a claim it vouched for (B2), within the claim's maximum age
+of 192 hours from the vouch, and only the delivery kept for that
+claim's old key. The old device's key is a vouched claim's old key and
+never its new one, so a thief exchanging with it gets nothing. A duress
+session MUST answer as a guardian holding nothing (ADR-032), with the
+same refusal as every other. A receiver MUST keep `0x0d` pieces as a
+returned backup and never as a designation (A8).
+
 **A6. Restore** (`recover_guardian_backup`, `recover_from_shards`).
 The recovering identity opens each re-sealed response with its own
 secret, keeps those whose metadata matches the file's header, at most
@@ -226,8 +240,10 @@ guardian backup when there are three to nine of them
 guardians get none), split at the voucher threshold capped at the
 guardian count and raised to two, and queues each guardian its sealed
 share with the file in A7 pieces (vauchi/private#796, D10). Guardians
-keep the newest whole delivery (A8) and forget it on a release, but
-nothing returns it to a recovering person yet (plan steps 2 and 3).
+keep the newest whole delivery (A8), forget it on a release, and hand
+it back in the meeting (A5); restoring the returned backup into the new
+identity, and the screens that lead a guardian through the meeting, are
+not shipped yet (plan steps 2c and 3).
 The guardian **tokens** of A4 do reach the relay today,
 for up to nine recovery-trusted contacts. A tenth makes the set 2 050
 bytes, over the relay's 2 048, and the whole set is refused without

@@ -7,6 +7,10 @@ Each spec tag maps to the Core commit it was extracted from.
 
 ## Unreleased
 
+- Social Recovery A5 and Update and Sync B5: in the recovery meeting a
+  guardian hands its share and the backup back as `0x0d` pieces, only to
+  the new key of a claim it vouched for, within 192 hours; a duress
+  session answers as holding nothing (vauchi/private#796).
 - Social Recovery A8: a changed guardian backup is sent again at most
   once a day, never from a duress session (vauchi/private#796).
 - Social Recovery A8 and Update and Sync B5: taking a guardian out of
