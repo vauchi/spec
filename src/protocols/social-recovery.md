@@ -289,7 +289,8 @@ fails with the one refusal of A9.
 
 **A11. Restoring the same identity** (`begin_recovery`,
 `hand_back_in_person`, `take_hand_back`,
-`restore_identity_from_hand_backs`; planned, vauchi/private#796 P28 and
+`restore_identity_from_hand_backs`; Core API, ceremony wiring planned,
+vauchi/private#796 P28 and
 P32). Social recovery is the last way back in, after linking from a
 working device and the password backup, and like them it restores the
 same identity; it rekeys no contact.
@@ -301,8 +302,9 @@ same identity; it rekeys no contact.
   hand-backs taken for the old one.
 - In person, a guardian that keeps a backup for the claim's old key, and
   only such a guardian, re-seals its share to `pk(r)` (A5) and hands it
-  back with the backup over the meeting's own channel (animated QR, BLE
-  or NFC). Nothing goes through a relay and nothing is exchanged as
+  back by QR, with the encrypted backup in Bluetooth pieces in the same
+  meeting (P33 and the framing below). Nothing goes through a relay and
+  nothing is exchanged as
   contacts. An expired claim, an unknown old key and a duress session
   MUST give the same refusal.
 - The phone opens each hand-back's share with `r` as it takes it, and
@@ -356,7 +358,10 @@ appending. A gap, changed length or conflicting duplicate is refused
 without appending. Before completing a piece, it MUST decode A7 and
 verify the decoded index and backup hash against the packet and accepted
 share. A malformed completed piece is dropped so it can start again.
-A completed piece may be replayed after a lost acknowledgement.
+A final-fragment replay MUST return the completed piece again so storage
+can be retried after a lost acknowledgement. Replaying an earlier fragment
+after completion MUST return only its acknowledgement, without decoding
+or copying the whole piece again.
 
 Core MUST persist a completed piece through `take_hand_back_piece`
 before sending its final acknowledgement. The codec's receipt alone is
@@ -364,7 +369,9 @@ not a storage receipt. Restarting a meeting retries a piece from its
 beginning; completed pieces are already persistent and idempotent. A
 cancelled sender or receiver refuses further acknowledgements or data;
 Core cancels the corresponding hardware operation and ignores its late
-observations.
+observations. A restarted attempt MUST use a fresh scoped link operation;
+observations from its retired predecessor MUST NOT reach the new codec.
+The acknowledgement carries no transfer identity of its own.
 
 Acknowledgements are flow control, not authentication or proof of
 restoration. The taken share, whole-backup hash, backup encryption and
