@@ -7,6 +7,18 @@ Each spec tag maps to the Core commit it was extracted from.
 
 ## Unreleased
 
+- Social Recovery A11 (planned): social recovery restores the same
+  identity, from shares guardians hand back in person to a temporary
+  recovery key; the seed must derive the claimed key, the phone takes a
+  new device index with the lost device revoked in its registry, and a
+  share counts once. Section C is compromise rotation only: C3 accepts no
+  rekey until the policy guardians' certificate exists, and vouchers,
+  guardian tokens and old-key signatures authorize nothing; C5's
+  continuation is acted on by none; a contact met in person may rotate
+  to the owner's registered next identity on recognition and that
+  identity's pinned hash. The Tamarin models allow a single recovery,
+  and S16 and S17 say so (vauchi/private#796, P11 to P32).
+
 - Social Recovery A7, B2, C3 to C6: the guardian delivery carries the
   guardian's token and an in-person vouch attaches it; a rekey that is
   provably the recovered contact's is accepted without asking, its proof

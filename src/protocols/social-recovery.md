@@ -551,7 +551,12 @@ The rotation is being redesigned around a next identity registered in
 advance with policy guardians, a certificate for online contacts and
 recognition for contacts met in person (design
 `2026-11-03-pinned-guardian-policy`, P25, P26, P31); until the
-certificate exists, C3 accepts nothing.
+certificate exists, C3 accepts nothing. In person, a contact that
+recognizes the owner MAY rotate to the identity the owner shows only when
+that identity matches the hash of the registered next identity the
+contact pinned: the thief cannot produce it, and since it is fixed in
+advance two meetings cannot give two successors. An identity that does
+not match makes a separate contact, and the old one does not move.
 
 The Tamarin models below allow a single recovery (`restriction Once`), so
 their lemmas say nothing about two attempts competing for one old
