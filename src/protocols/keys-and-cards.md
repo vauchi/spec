@@ -253,7 +253,8 @@ Import accepts version `0x02` only and parses the plaintext with
 declared lengths that must fit (`a_plaintext_whose_lengths_overrun_it_is_refused`).
 Bytes after the device name are not refused: `parse_backup_plaintext`
 never checks that it reached the end, a defect, vauchi/private#949.
-The restored device keeps the backup's device index.
+The restored device keeps the backup's device index. A social-recovery
+restore takes a new one instead (Social Recovery A11, planned).
 
 **D2. Full backup, v3** (legacy, still imported). `0x03 || salt(16) ||
 Enc(K3, zlib(JSON))` with

@@ -274,7 +274,8 @@ the passphrase (`guardian_backup_needs_passphrase`), and a missing or
 wrong one fails with the same refusal as shares that do not open it
 (`recover_guardian_backup_with_passphrase`).
 
-**A10. Restore** (`restore_from_returned_backups`). The new identity
+**A10. Restore** (`restore_from_returned_backups`), the path Core ships
+today, which A11 replaces (vauchi/private#796, P28). The new identity
 (D6) opens the backups its guardians handed back (A5, A8): it tries
 every returned share on each returned backup, newest first, since
 guardians may hold different deliveries and a share opens only its
@@ -285,6 +286,34 @@ restored exchanged contact is marked as waiting for its rekey
 (`rekey_pending_contacts`, section C), so restoring again restores
 nothing. A share of a group missing, or a missing or wrong passphrase,
 fails with the one refusal of A9.
+
+**A11. Restoring the same identity** (`begin_recovery`,
+`hand_back_in_person`, `take_hand_back`,
+`restore_identity_from_hand_backs`; planned, vauchi/private#796 P28 and
+P32). Social recovery is the last way back in, after linking from a
+working device and the password backup, and like them it restores the
+same identity; it rekeys no contact.
+
+- The new phone has no identity. It makes a temporary recovery key `r`
+  and keeps it encrypted at rest until the restore; its claim (B1) names
+  the old identity's key and `pk(r)`. A phone with an identity MUST
+  refuse to begin.
+- In person, a guardian that keeps a backup for the claim's old key, and
+  only such a guardian, re-seals its share to `pk(r)` (A5) and hands it
+  back with the backup over the meeting's own channel (animated QR, BLE
+  or NFC). Nothing goes through a relay and nothing is exchanged as
+  contacts. An expired claim, an unknown old key and a duress session
+  MUST give the same refusal.
+- The phone keeps each hand-back once, keyed by its share's digest.
+- With one share of every group the phone opens the backup with `r`
+  (A6, A9) and becomes its identity on a new device index, so the lost
+  device can be revoked in the signed registry; it restores the
+  contacts with their shared keys, the labels and the own card, then
+  discards `r` and the hand-backs. Ratchets are not in the backup:
+  sessions restart through the device-registry handshake.
+- If the lost device was stolen unlocked, its keys stay exposed:
+  revoking it stops its sync and takes nothing from it. Moving contacts
+  away from those keys is compromise rotation (section C).
 
 ### What ships today
 
@@ -505,6 +534,23 @@ of 2026-10-30:
 ---
 
 ## C. After recovery: the old contacts
+
+This section is compromise rotation: moving contacts to a new identity
+after a device holding the identity's keys was stolen unlocked
+(vauchi/private#796 P29). An ordinary recovery (A11, the password
+backup, a linked device) restores the same identity and rekeys nothing.
+The rotation is being redesigned around a next identity registered in
+advance with policy guardians, a certificate for online contacts and
+recognition for contacts met in person (design
+`2026-11-03-pinned-guardian-policy`, P25, P26, P31); until the
+certificate exists, C3 accepts nothing.
+
+The Tamarin models below allow a single recovery (`restriction Once`), so
+their lemmas say nothing about two attempts competing for one old
+identity; that the guardians' decision has one outcome is modelled
+separately in Quint (`guardian_voting.qnt`, an inductive proof for five
+guardians, three ballots and two values; `guardian_history.qnt`, traces)
+and is not built.
 
 Restoring the guardian backup gives the owner every contact with its
 old shared key; the thief holds the same keys. `social_recovery.spthy`
