@@ -323,6 +323,54 @@ same identity; it rekeys no contact.
   revoking it stops its sync and takes nothing from it. Moving contacts
   away from those keys is compromise rotation (section C).
 
+### Recovery backup transport (A11, P33; implementation in progress)
+
+The share is shown by QR and names the encrypted backup's SHA-256. A
+backup travels in the A7 piece encoding over the meeting's Bluetooth
+link; a receiver MUST accept a backup only when a taken share names its
+hash. This does not create a contact or use a relay.
+
+One encoded piece is at most 48 KiB. The recovery transport fragments it
+independently of the contact-exchange chunker: raising that chunker's
+256-chunk bound is not required. The sender uses an ATT MTU from 23 to
+517 and limits each attribute value to `min(MTU - 3, 512)` bytes.
+
+Each data packet has magic `RBP1`, piece index (`u16` big-endian), byte
+offset (`u16` big-endian), encoded piece length (`u16` big-endian), then
+non-empty bytes. Its ten-byte header leaves at least ten data bytes at
+MTU 23. An acknowledgement has magic `RBA1`, the piece index (`u16`
+big-endian) and the exclusive end offset (`u16` big-endian), with no
+trailing bytes. The encoded piece length MUST be nonzero and at most
+48 KiB; a data packet MUST be at most 512 bytes and its end offset MUST
+not exceed that length.
+
+The sender MUST keep at most one unacknowledged packet and advance only
+on its matching acknowledgement. A duplicate acknowledgement does not
+advance it; another piece's acknowledgement or an unexpected end offset
+is refused. Core chooses deadlines and explicitly retries the same
+packet; neither the OS shell nor the framing codec starts a retry timer.
+
+The receiver keeps one bounded piece buffer. It accepts contiguous bytes
+and identical duplicates, acknowledging the latter again without
+appending. A gap, changed length or conflicting duplicate is refused
+without appending. Before completing a piece, it MUST decode A7 and
+verify the decoded index and backup hash against the packet and accepted
+share. A malformed completed piece is dropped so it can start again.
+A completed piece may be replayed after a lost acknowledgement.
+
+Core MUST persist a completed piece through `take_hand_back_piece`
+before sending its final acknowledgement. The codec's receipt alone is
+not a storage receipt. Restarting a meeting retries a piece from its
+beginning; completed pieces are already persistent and idempotent. A
+cancelled sender or receiver refuses further acknowledgements or data;
+Core cancels the corresponding hardware operation and ignores its late
+observations.
+
+Acknowledgements are flow control, not authentication or proof of
+restoration. The taken share, whole-backup hash, backup encryption and
+restored-identity check in A11 remain the acceptance boundaries. Completing
+the transport MUST NOT itself declare recovery successful.
+
 ### What ships today
 
 `export_guardian_backup_with_shards`, `export_guardian_backup_for_groups`,
