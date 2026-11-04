@@ -295,21 +295,29 @@ working device and the password backup, and like them it restores the
 same identity; it rekeys no contact.
 
 - The new phone has no identity. It makes a temporary recovery key `r`
-  and keeps it encrypted at rest until the restore; its claim (B1) names
-  the old identity's key and `pk(r)`. A phone with an identity MUST
-  refuse to begin.
+  and keeps it, with the old identity's key its claim names, encrypted at
+  rest until the restore; its claim (B1) names that key and `pk(r)`. A
+  phone with an identity MUST refuse to begin; a new target drops the
+  hand-backs taken for the old one.
 - In person, a guardian that keeps a backup for the claim's old key, and
   only such a guardian, re-seals its share to `pk(r)` (A5) and hands it
   back with the backup over the meeting's own channel (animated QR, BLE
   or NFC). Nothing goes through a relay and nothing is exchanged as
   contacts. An expired claim, an unknown old key and a duress session
   MUST give the same refusal.
-- The phone keeps each hand-back once, keyed by its share's digest.
+- The phone opens each hand-back's share with `r` as it takes it, and
+  MUST refuse one that does not open; it keeps one hand-back per opened
+  share, so a retry sealed afresh and two guardians of one group count
+  once, and refuses a new share past the shard bound.
 - With one share of every group the phone opens the backup with `r`
-  (A6, A9) and becomes its identity on a new device index, so the lost
-  device can be revoked in the signed registry; it restores the
-  contacts with their shared keys, the labels and the own card, then
-  discards `r` and the hand-backs. Ratchets are not in the backup:
+  (A6, A9). It MUST refuse a backup whose seed does not derive the
+  claimed old key, before importing anything: anyone can seal another
+  identity's backup to the `pk(r)` a claim shows. Otherwise it becomes
+  that identity on a new device index and saves a signed registry
+  listing the lost device (derived from the backup's seed and index) as
+  revoked and itself as active; it restores the contacts with their
+  shared keys, the labels and the own card, then discards `r` and the
+  hand-backs. Ratchets are not in the backup:
   sessions restart through the device-registry handshake.
 - If the lost device was stolen unlocked, its keys stay exposed:
   revoking it stops its sync and takes nothing from it. Moving contacts
