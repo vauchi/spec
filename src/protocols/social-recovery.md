@@ -346,6 +346,11 @@ trailing bytes. The encoded piece length MUST be nonzero and at most
 48 KiB; a data packet MUST be at most 512 bytes and its end offset MUST
 not exceed that length.
 
+For piece index 1, encoded length 53 and MTU 23, the first data header is
+`52425031000100000035` (ten payload bytes follow), its ACK is
+`524241310001000a`, and the next data header is
+`524250310001000a0035`. These vectors fix byte order and framing only.
+
 The sender MUST keep at most one unacknowledged packet and advance only
 on its matching acknowledgement. A duplicate acknowledgement does not
 advance it; another piece's acknowledgement or an unexpected end offset
