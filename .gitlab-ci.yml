@@ -194,6 +194,8 @@ build:spec:
         cargo install mdbook --version "$MDBOOK_VERSION" --locked
       fi
     - mdbook build
+    - python3 scripts/build-discovery.py
+    - python3 -m unittest discover -s scripts/tests -p test_discovery.py
     # Build provenance: the deploy's smoke test and `just deploy-check` read
     # it, and nginx's /health serves it so an empty web root fails the
     # health check instead of deploying.

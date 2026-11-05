@@ -1,0 +1,6 @@
+/* SPDX-FileCopyrightText: 2026 Mattia Egloff <mattia.egloff@pm.me> */
+/* SPDX-License-Identifier: GPL-3.0-or-later */
+:root { color-scheme: light dark; }
+html.light code.hljs { background: var(--quote-bg); }
+#theme-list button { min-height: 32px; }
+#theme-list button:focus-visible { outline: 2px solid var(--links); }

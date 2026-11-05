@@ -1,0 +1,30 @@
+# Vauchi Protocol Specification
+
+> Protocols, security claims, wire schemas and reproducible test vectors
+> for Vauchi's updatable contact cards. This specification is a draft.
+
+Read the claims alongside their assumptions and limits. The implementing
+code is public at https://gitlab.com/vauchi/core; where prose and code
+disagree, report the discrepancy rather than assuming a guarantee.
+
+## Start here
+
+- [Introduction](https://vauchi.app/spec/index.md): scope and status
+- [Conventions](https://vauchi.app/spec/conventions.md): normative vocabulary
+- [Attackers](https://vauchi.app/spec/attackers.md): adversaries and assumptions
+- [Security claims](https://vauchi.app/spec/claims.md): guarantees and limits
+
+## Protocols and verification
+
+- [In-person exchange](https://vauchi.app/spec/protocols/in-person-exchange.md)
+- [Keys and cards](https://vauchi.app/spec/protocols/keys-and-cards.md)
+- [Updates and sync](https://vauchi.app/spec/protocols/update-and-sync.md)
+- [Relay](https://vauchi.app/spec/protocols/relay.md)
+- [Recovery](https://vauchi.app/spec/protocols/social-recovery.md)
+- [Test vectors](https://vauchi.app/spec/vectors.md)
+- [Wire schemas](https://vauchi.app/spec/schemas.md)
+
+## Optional
+
+- [Disclosure policy](https://vauchi.app/spec/disclosure.md)
+- [Documentation overview](https://vauchi.app/docs/llms.txt)

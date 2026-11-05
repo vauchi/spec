@@ -4,3 +4,7 @@
 
 [files]
 extend-exclude = ["book/", "src/vectors/"]
+[default.extend-words]
+# mdBook's CSS variable spells --sidebar-non-existant this way.
+existant = "existant"
+

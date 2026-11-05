@@ -22,6 +22,12 @@ preferred-dark-theme = "coal"
 git-repository-url = "https://gitlab.com/vauchi/spec"
 edit-url-template = "https://gitlab.com/vauchi/spec/-/edit/main/src/{path}"
 no-section-label = false
+additional-css = ["theme-colors.css"]
+additional-js = ["theme-switcher.js"]
+
+[output.html.playground]
+editable = false
+runnable = false
 
 [output.html.search]
 enable = true
