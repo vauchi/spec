@@ -7,6 +7,9 @@ Each spec tag maps to the Core commit it was extracted from.
 
 ## Unreleased
 
+- Social Recovery A11 transport (vauchi/private#796, P33): the hand-back QR
+  also holds a per-attempt token. The guardian advertises what derives from
+  it, and the phone dials only a match.
 - Social Recovery A11 (planned): social recovery restores the same
   identity, from shares guardians hand back in person to a temporary
   recovery key; the seed must derive the claimed key, the phone takes a

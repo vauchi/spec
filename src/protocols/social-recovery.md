@@ -332,6 +332,16 @@ backup travels in the A7 piece encoding over the meeting's Bluetooth
 link; a receiver MUST accept a backup only when a taken share names its
 hash. This does not create a contact or use a relay.
 
+The QR holds the share and a fresh 32-byte attempt token, each in standard
+base64, joined by a dot. The token is random per attempt, so a bystander
+cannot re-recognise a device across sightings. The guardian advertises the
+attempt token that derives from it, as the Glance exchange does, and stays
+the GATT peripheral. The phone scans for that advertisement and dials only
+a match. The advertisement carries a short prefix, so an unrelated device
+can match; the phone still accepts only frames of the backup its share
+names. The token authenticates nothing. A phone that already holds the whole
+backup a share names takes the share and does not dial.
+
 One encoded piece is at most 48 KiB. The recovery transport fragments it
 independently of the contact-exchange chunker: raising that chunker's
 256-chunk bound is not required. The sender uses an ATT MTU from 23 to
