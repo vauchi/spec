@@ -91,9 +91,10 @@ range; may run a sniffer at NFC range.
 
 ## Someone who obtains a link, a code or a link QR
 
-- **A link** (`vauchi.app/x#pk=..&n=..`): whoever opens it first
-  within the 7-day deposit and the sender's 300-second wait becomes
-  the sender's contact; no approval, no code (S9, partial).
+- **A link** (`vauchi.app/x#pk=..&n=..&v=2`) without its code: one guess
+  at the six digits, which cannot be tested offline, and a wrong one uses the
+  link up. Whoever holds both, within the sender's 300-second wait, becomes
+  the sender's contact (S9, partial).
 - **A short code**: whoever claims it first within its TTL takes the
   offer; the real responder then fails visibly; the complete
   authentication fingerprint reveals a substitution only when both

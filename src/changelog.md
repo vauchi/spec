@@ -7,6 +7,10 @@ Each spec tag maps to the Core commit it was extracted from.
 
 ## Unreleased
 
+- Link and Relay-Mediated Exchange A: a link needs a six-digit code sent
+  another way. Symmetric SPAKE2 keys enter the escrow keys, the responder
+  deposits its card only after the sender's deposit, and links gain `v=2`
+  (vauchi/private#727). Backs S9.
 - Keys and Cards G3: a link contact is `Remote`, below Standard; device sync
   carries the exchange transport (vauchi/private#727).
 - Attackers: the first release's gate is a second operator, as ADR-037's

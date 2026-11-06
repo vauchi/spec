@@ -85,11 +85,11 @@ Extracted on 2026-10-28 from the security-claims page of vauchi.app/docs, itself
 
 ## S9. A remote exchange over a link is weaker, and says so
 
-- **Attacker**: Anyone who obtains the link before its recipient.
-- **Statement**: A card can be exchanged by sending a link; the link carries a signed bootstrap and the result is a live contact with a shared key. Today whoever opens the link first becomes a contact, with no approval by the sender and no out-of-band code.
+- **Attacker**: Anyone who obtains the link before its recipient, without the code the sender sends another way.
+- **Statement**: A card can be exchanged by sending a link and a six-digit code; the result is a live contact with a shared key, marked `Remote`. Whoever holds the link and not the code gets one guess per link, one in a million, and cannot test guesses offline. This holds only if the code travels another way than the link, which the copy can only ask for, and `spake2` has not been independently audited.
 - **If false**: A link forwarded or intercepted makes a stranger a contact of the sender without the sender noticing.
 - **Status**: partial
-- **Backed by**: test `v2_two_party_completes_to_a_live_exchanged_link_contact_with_symmetric_key` in `complete_link_exchange_tests.rs`; the bootstrap signature covers the card and the exchange (`link_bootstrap_signature_covers_the_card`, `link_bootstrap_signature_is_bound_to_its_exchange`), and a second opener is told the link was used (`a_second_person_opening_a_used_link_is_told_it_was_used` in `link_exchange_api_tests.rs`); `derive_sas` in `relay_exchange_tests.rs` (the full authentication fingerprint exists only for the relay-mediated exchange; its separate six-digit rendezvous code is not authentication); Core's `link_exchange.spthy` (round 8) shows `contact_only_after_approval` falsified today. Sender approval and an out-of-band code are tracked as open work.
+- **Backed by**: tests `a_wrong_code_leaves_the_two_sides_in_different_gates` in `link_mode_tests.rs`, `a_wrong_code_makes_no_contact_on_either_side_and_uses_up_the_link` in `link_exchange_api_tests.rs`, `a_link_of_no_supported_version_is_refused` and `the_link_holds_nothing_but_its_key_nonce_version_and_name` in `link_mode_tests.rs`; `v2_two_party_completes_to_a_live_exchanged_link_contact_with_symmetric_key` in `complete_link_exchange_tests.rs`; the bootstrap signature covers the card and the exchange (`link_bootstrap_signature_covers_the_card`, `link_bootstrap_signature_is_bound_to_its_exchange`), and a second opener is told the link was used (`a_second_person_opening_a_used_link_is_told_it_was_used` in `link_exchange_api_tests.rs`); Core's `link_exchange.spthy` shows `contact_only_after_approval` verified on the shipped protocol, with the one winning guess excepted, assuming SPAKE2's messages offer no offline test.
 - **Section**: [link-exchange](protocols/link-exchange.md)
 
 ## S10. Trust level follows how you exchanged, and cannot be edited

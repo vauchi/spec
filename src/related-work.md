@@ -104,9 +104,9 @@ message that carries `AUTH`.
 - **Different.** Delta Chat's transport is ordinary e-mail between
   addresses both sides already have; Vauchi's is a relay that holds
   sealed slots for a short time and learns no address.
-- **Weaker or untested.** A link sent over a channel the attacker reads
-  gives the attacker the exchange; the chapter says so, and the claim
-  for link exchanges is partial ([S9](claims.md)).
+- **Weaker or untested.** A link and its code sent over one channel the
+  attacker reads give the attacker the exchange; the chapter says so, and
+  the claim for link exchanges is partial ([S9](claims.md)).
 
 ## Identifier-free delivery: SimpleX
 
