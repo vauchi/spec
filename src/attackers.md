@@ -56,8 +56,9 @@ Holds the proxy host that terminates the client's TLS.
 
 The alpha's situation (ADR-037 addendum 2026-09-08): address and
 content meet in one party. The delayed path spreads the timing;
-nothing else separates them. S3 is partial for exactly this reason,
-and the first release's gate is host separation.
+nothing else separates them. S3 is partial for exactly this reason.
+Host separation closes the gate for the alpha and beta; the first
+release requires a second operator.
 
 ## A network observer
 

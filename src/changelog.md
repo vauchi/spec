@@ -7,6 +7,9 @@ Each spec tag maps to the Core commit it was extracted from.
 
 ## Unreleased
 
+- Attackers: the first release's gate is a second operator, as ADR-037's
+  addendum of 2026-09-08 sets it. Host separation closes it only for the
+  alpha and beta (vauchi/private#1094).
 - Social Recovery A11 transport (vauchi/private#796, P33): the hand-back QR
   also holds a per-attempt token. The guardian advertises what derives from
   it, and the phone dials only a match.

@@ -59,7 +59,7 @@ which also opens a card sealed by `EscrowKeys` with the recorded card
 key and refuses the payload with one flipped bit).
 
 Not yet covered, and the natural next additions: the relay-mediated
-short code and its SAS; the BLE handshake and advertisement tokens;
+short code and its authentication fingerprint; the BLE handshake and advertisement tokens;
 the NFC key; device-link confirmation codes; social-recovery shares
 and sealed boxes; the signed OHTTP key record.
 
