@@ -7,6 +7,8 @@ Each spec tag maps to the Core commit it was extracted from.
 
 ## Unreleased
 
+- Keys and Cards G3: a link contact is `Remote`, below Standard; device sync
+  carries the exchange transport (vauchi/private#727).
 - Attackers: the first release's gate is a second operator, as ADR-037's
   addendum of 2026-09-08 sets it. Host separation closes it only for the
   alpha and beta (vauchi/private#1094).

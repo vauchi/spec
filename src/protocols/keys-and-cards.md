@@ -614,6 +614,7 @@ visibility do. New fields default to hidden
 ```text
 Cautious  if the contact's identity was recovered (until the fingerprint is re-verified)
 Verified  if the owner marked the fingerprint verified out of band
+Remote    if the contact was exchanged over a link
 High      if the transport proximity is Physical (USB) or ContactRange (NFC),
           or the exchange's proximity confidence is High
 Standard  otherwise
@@ -622,6 +623,12 @@ Standard  otherwise
 A contact stored before trust metrics existed is High only when its
 proximity confidence is High and it was exchanged over NFC or BLE
 (`contact/mod.rs`). An imported contact is always Standard.
+
+Remote ranks below Standard but is evaluated before High, so a proximity
+claim on a link contact cannot raise it. Only a fingerprint comparison does,
+to Verified. A Remote contact cannot be marked for recovery. The level is
+derived and not stored, and device sync carries the transport (E), so every
+device shows the same level.
 
 `mark_fingerprint_verified` sets `Verified` and clears the recovered
 flag. The metrics behind the decision (transport, confidence, the
