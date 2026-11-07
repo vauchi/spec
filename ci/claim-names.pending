@@ -8,4 +8,5 @@
 a_link_of_no_supported_version_is_refused core!2242
 a_wrong_code_leaves_the_two_sides_in_different_gates core!2242
 a_wrong_code_makes_no_contact_on_either_side_and_uses_up_the_link core!2242
+responder_open core!2242
 the_link_holds_nothing_but_its_key_nonce_version_and_name core!2242
