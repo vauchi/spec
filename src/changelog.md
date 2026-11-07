@@ -11,6 +11,11 @@ Each spec tag maps to the Core commit it was extracted from.
   another way. Symmetric SPAKE2 keys enter the escrow keys, the responder
   deposits its card only after the sender's deposit, and links gain `v=2`
   (vauchi/private#727). Backs S9.
+- Link and Relay-Mediated Exchange A5, A6: the relay answers the same
+  escrow deposit again `Stored`; only another blob in a taken slot is
+  `AlreadyExists`. A client resends after a 502 the OHTTP relay also gives
+  once a put was stored, and that resend had ended the link as
+  `link_already_used`. Same bytes, same guess (vauchi/private#727).
 - Keys and Cards G3: a link contact is `Remote`, below Standard; device sync
   carries the exchange transport (vauchi/private#727).
 - Attackers: the first release's gate is a second operator, as ADR-037's

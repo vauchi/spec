@@ -179,14 +179,18 @@ user: the responder MUST end the exchange as `link_already_used` and MUST
 NOT deposit its card. Each escrow slot is written once, so the client
 reports `AlreadyExists` as a failure (`slot_taken`,
 `network/escrow_client.rs`), never as a stored deposit. That write-once
-slot is what limits a link to one guess at its code.
+slot is what limits a link to one guess at its code. A client resends a
+request the OHTTP relay answered 502, which it also does after the put was
+stored (`network/http_transport.rs`); the resent deposit is the same bytes,
+so it is the same guess, and the relay answers it `Stored` (A6).
 
 **A6. Relay escrow rules** (`relay/src/escrow.rs`,
 `vauchi-protocol/src/escrow.rs`). A gate holds exactly two slots. A
 PUT MUST be refused when the blob exceeds 65 536 bytes decoded
 (`BlobTooLarge`), when `ttl_seconds` exceeds 604 800 (also reported
-as `BlobTooLarge`), when the slot already exists in a live gate
-(`AlreadyExists`), when the gate already has two slots, or when a new
+as `BlobTooLarge`), when the slot already exists in a live gate with
+another blob (`AlreadyExists`; the same blob again MUST be answered
+`Stored` and change nothing), when the gate already has two slots, or when a new
 gate would exceed 10 000 gates; both are reported as `GateFull`, and
 the cap counts expired gates the sweep has not yet removed. A GET MUST
 answer `NotFound` for an expired or unknown gate, `NotReady{count}`
