@@ -59,6 +59,15 @@ versions; the changelog maps each spec tag to the Core commit it was
 extracted from. Wire-format changes bump MINOR while the spec is a
 draft and MAJOR afterwards.
 
+Clients from two releases talk to each other while a store review
+holds one of them back. From the first store release on, a client
+works with clients on the previous Core minor release. A change to a
+wire version therefore either keeps a parser for the previous version
+for one minor release, or ships a documented migration that the
+previous-release interop lane (`previous_release_interop`) runs. Before
+the first store release no older client is supported, and the lane runs
+the current client on both sides (vauchi/private#1111).
+
 ## Machine-readable artefacts
 
 A machine-readable file (vectors, transcripts, schemas) is added only
@@ -80,6 +89,7 @@ way, and each has, or lacks, a check that fails when it does:
 | A claim's proof, as a set | In Core, the tests, lemmas and invariants a claim names carry `@claim: S<n>`, with gaps the claim's entry names, and so do the end-to-end lane cases S1, S3 and S12 name (e2e!288); `check:claim-annotations` fails when a shipped or partial claim has no annotation left in Core or e2e, or an annotation names no claim (spec!13, vauchi/private#874) | The last annotated test behind a claim is deleted, or a claim is removed while tests still cite it |
 | Any of the above, between spec edits | The four drift checks (vectors, wire schema, claim names, claim annotations) run on a nightly schedule against the mains (spec!12); Core's `check:spec-names` runs the name and annotation checks against each Core merge request that touches a crate, and warns when the vectors fixture differs from this book's copy (core!2078) | Core moves while nobody edits the spec; a Core MR renames or removes a cited name |
 | A behaviour behind a sentence | The `Spec:` trailer (VGT12): a `feat:`, `fix:` or `refactor:` commit on a Core protocol path or a relay's `src/` states `Spec: unchanged` or the claims and sections it moves; VGT12 is a local commit-msg hook only, no CI job checks it (vauchi/private#950); review holds the statement against the diff | A protocol commit carries no statement, or a false one |
+| Compatibility with the previous release | The end-to-end smoke lane runs `previous_release_interop` on every merge request and on `main`: the previous store release's CLI and the current one exchange, by QR and by link from each side, and see each other's updates through the real relays; when the pinned set changes, the lane's binary build fails if the previous CLI's Core is not the current minor or the one below it | A wire change breaks the previous client, or Core's minor moves past the pinned previous release |
 | A certification lane | The end-to-end repository's blocking lanes on every merge request, `main` and schedule; the release gate refuses a missing, stale or partial report | A lane case fails or is skipped |
 | A normative sentence, state or failure case | The chapter's status line pins the Core commit it was read from; re-extraction is by hand | Core moves past the pinned commit (the changelog records re-extractions) |
 | A source-file link | None; links name `main` | A file is moved or renamed |

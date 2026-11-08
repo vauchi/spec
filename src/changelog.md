@@ -7,6 +7,11 @@ Each spec tag maps to the Core commit it was extracted from.
 
 ## Unreleased
 
+- Conventions, Versioning: from the first store release a client works
+  with clients on the previous Core minor; a wire version change keeps a
+  parser for the previous version for one minor, or ships a documented
+  migration the previous-release interop lane runs. The table of checks
+  names that lane (vauchi/private#1111).
 - Link and Relay-Mediated Exchange A: a link needs a six-digit code sent
   another way. Symmetric SPAKE2 keys enter the escrow keys, the responder
   deposits its card only after the sender's deposit, and links gain `v=2`
