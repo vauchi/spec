@@ -112,6 +112,10 @@ recovering user.
 
 - **Can**: read the database if the platform secure storage yields
   the raw storage master key; recover the seed and every key from it;
+  read the receive state, ratchet states and the mailbox tokens stored
+  ahead, from a phone unlocked once since boot, because secure storage
+  yields the background receive key then even while the phone is
+  locked (S12);
   brute-force a six-digit duress PIN offline from its Argon2id hash;
   guess a backup's password at Argon2id cost, past the strength gate
   both the full backup and the identity-only export apply

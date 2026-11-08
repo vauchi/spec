@@ -18,7 +18,7 @@
 One 32-byte master seed is the whole identity: every signing, exchange,
 device and storage key derives from it, so a person can carry it to a
 new device in a backup or a device link and lose nothing, and can
-destroy one key in secure storage and make everything at rest
+destroy the keys in secure storage and make everything at rest
 unreadable. Cards are the data this protects: what a person shares,
 field by field, with each contact.
 
@@ -115,6 +115,23 @@ lives in the database the SMK opens. Before an identity exists the
 database is under a random bootstrap key, also in secure storage; the
 move to the SEK happens once the SMK is saved
 (`api/vauchi/storage_keys.rs`).
+
+The receive state a locked phone advances is under a second key, the
+background receive key (BRK, ADR-033 amendment 2026-11-07): 32 random
+bytes, not derived from the SMK, whose source cannot be read while the
+phone is locked. It is stored in the class of secure storage readable
+after the first unlock since boot, made with the identity or at the first
+open of an older one, never replaced, and destroyed by every shred with
+the SMK. Ratchet states and the mailbox tokens stored ahead for the next
+14 days are sealed under keys derived from it, in the same database file
+as the rest, so a received update still commits ratchet and card in one
+transaction (`storage/receive_key.rs`):
+
+```text
+ratchet key = HKDF(BRK, "vauchi-ratchet-receive-key-v1:" || contact id)
+day key     = HKDF(BRK, "vauchi-receive-tokens-v1:" || day, 8 bytes BE)
+check key   = HKDF(BRK, "Vauchi_Receive_Key_Check_v1")
+```
 
 **A6. HKDF and the salt rule.** Every derivation in this book is
 HKDF-SHA256 (RFC 5869). `HKDF::derive_key(None, ikm, info)` means a
