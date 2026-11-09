@@ -25,6 +25,7 @@ include:
   - template: Security/Secret-Detection.gitlab-ci.yml
 
 variables:
+  GIT_DEPTH: "0"
   VAUCHI_SCRIPTS_REF: "ci-templates-v2026.10.08"
 
 stages:
@@ -196,6 +197,8 @@ build:spec:
     - mdbook build
     - python3 scripts/build-discovery.py
     - python3 -m unittest discover -s scripts/tests -p 'test_*.py'
+    - python3 scripts/validate_schema.py book > schema-validation.txt
+    - cat schema-validation.txt
     # Build provenance: the deploy's smoke test and `just deploy-check` read
     # it, and nginx's /health serves it so an empty web root fails the
     # health check instead of deploying.
@@ -206,6 +209,7 @@ build:spec:
   artifacts:
     paths:
       - book/
+      - schema-validation.txt
     expire_in: 1 week
   rules:
     - if: $CI_PIPELINE_SOURCE == "schedule"
