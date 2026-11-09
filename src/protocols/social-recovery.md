@@ -44,7 +44,7 @@ stores the pieces can read none of them.
 
 ```text
 Owner                                   Guardian G_i                 Relay
-  | B = random 32 B; file = v5 backup under B (Keys and Cards, D4)
+  | B = random 32 B; file = v5 backup under B (Keys and Cards, D5)
   | shares = Shamir(B, t, n); share_i sealed to G_i's X25519 key
   |-- sealed share_i (in person or any channel) -->|
   | token_i = sign_owner("vauchi-recovery-guardian-v1" || owner || G_i || created_at)
@@ -173,7 +173,7 @@ The recovering identity opens each re-sealed response with its own
 secret, keeps those whose metadata matches the file's header, at most
 `n + 1` distinct ones out of at most 18 responses, and tries
 threshold-sized subsets in order: a candidate key is checked against
-the file's 16-byte key confirmation (Keys and Cards, D4) before the
+the file's 16-byte key confirmation (Keys and Cards, D5) before the
 AEAD open, so at most C(10, 5) = 252 subsets are tried, in the worst
 case of 5 of 9 guardians.
 The first key whose AEAD authenticates yields the envelope; the caller

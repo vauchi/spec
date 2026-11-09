@@ -5,11 +5,12 @@
 
 Known-answer values produced by the shipped functions in `vauchi-core`
 and verified by its test suite: the `identity` to `backup_v6`
-entries by `vauchi-core/tests/it/protocol_test_vectors_tests.rs`, the
-two exchange entries by `protocol_exchange_vectors_tests.rs`. Core's
-`test:core` job runs both files; its `test:vectors` job, which adds
-production Argon2id, filters on `protocol_test_vectors` and so runs
-only the first. The canonical
+entries by `vauchi-core/tests/it/protocol_test_vectors_tests.rs`,
+`backup_v7` by `protocol_test_vectors_backup_v7_tests.rs`, the two
+exchange entries by `protocol_exchange_vectors_tests.rs`. Core's
+`test:core` job runs all three files; its `test:vectors` job, which
+adds production Argon2id, filters on `protocol_test_vectors` and so
+runs the first two. The canonical
 file lives in Core at
 `vauchi-core/tests/fixtures/test-vectors/vauchi-protocol-vectors-v1.json`;
 CI fails this book when the copy below differs (ADR-076, decision 5:
@@ -24,10 +25,16 @@ the tagged format. The plain-language walk-through is at
 Entries: `identity` (Keys and Cards A2, A3), `x3dh` (the two-DH
 agreement of the relay-mediated exchange), `ratchet` (one Double
 Ratchet step and one message), `mailbox_tokens` (the three daily
-tokens), `backup` (a legacy v3 file and its key) and `backup_v6` (the
-file the app writes today: the authenticated `0x06 || salt` header,
-the Argon2id base key, the `vauchi-backup-v6-state` key and a complete
-file), `qr_symmetric` and `link_exchange` (below), and `recovery_proof` (the
+tokens), `backup` (a legacy v3 file and its key), `backup_v6` (the
+file the app wrote before v7, kept as recorded: the authenticated
+`0x06 || salt` header, the Argon2id base key, the
+`vauchi-backup-v6-state` key and a complete file), `backup_v7` (the
+file the app writes today: the authenticated `0x07 || file_id ||
+salt_0 || salt_1` header, the slot the password opens, its Argon2id
+base key, the `vauchi-backup-v7-payload` key and a complete file;
+`backup_v7_vector_opens_its_real_payload_under_its_header_only` and
+`backup_v7_vector_imports_with_production_argon2id_and_refuses_a_wrong_password`),
+`qr_symmetric` and `link_exchange` (below), and `recovery_proof` (the
 stored recovery proof of Social Recovery B3: fixed old, new and helper
 seeds, the sealing key `HKDF(old_pk, "Vauchi_RecoveryProof_v3")`, the
 plain postcard and the sealed bytes;

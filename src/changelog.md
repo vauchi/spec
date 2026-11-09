@@ -7,6 +7,20 @@ Each spec tag maps to the Core commit it was extracted from.
 
 ## Unreleased
 
+- Keys and Cards D4 (new; vauchi/private#1117, ADR-080 point 7): the
+  full backup is v7, two payloads of one size behind a clear header of
+  version, random file id and one salt per payload, each payload bound
+  to the whole header. The real payload takes a random slot; the other
+  is for the planned decoy payload and is a zero frame under a random
+  key until then. A restore derives both keys before trying either.
+  From the real profile the snapshot carries the duress section: the
+  mask under a transfer key and the app password and duress PIN hashes,
+  so a restore locks as before; such a file holds two identities, and
+  S13 says what that exposes. D3 (v6) is still imported; the guardian
+  backup becomes D5 and what
+  the app offers D6. S13 names the v7 vector and its tests. Vectors:
+  `backup_v7` added; `backup_v6` kept as recorded.
+
 - Conventions, Versioning: from the first store release a client works
   with clients on the previous Core minor; a wire version change keeps a
   parser for the previous version for one minor, or ships a documented

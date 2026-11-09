@@ -257,7 +257,7 @@ never stored: they exist only derived from the SMK in memory.
 ## D. Backups
 
 Source: `vauchi-core/src/identity/mod.rs` (v2),
-`backup/full_backup.rs` (v3 and v5), `backup/snapshot/` (v6),
+`backup/full_backup.rs` (v3 and v5), `backup/snapshot/` (v6, v7),
 `backup/contact_backup.rs`, `backup/key_shard.rs`,
 `api/vauchi/full_backup.rs`.
 
@@ -293,8 +293,8 @@ contact, its identity key, its **shared key** and its visibility rules
 (`ContactBackupEntry`); all of it is inside the ciphertext. The
 plaintext MUST start with the zlib magic `0x78` on import.
 
-**D3. Full backup, v6** (what `Vauchi::export_full_backup` writes
-today). The header is in the clear and authenticated:
+**D3. Full backup, v6** (written until v7, still imported). The
+header is in the clear and authenticated:
 
 ```text
 header = 0x06 || salt(16)
@@ -306,17 +306,58 @@ The snapshot is `{ version: 6, created_at, identity, own_card,
 contacts, groups, overrides }`: the v3 contact entries plus each
 contact's hidden, blocked, favourite, archived, ignored and
 relationship state (transport, proximity, trust metrics, reciprocity),
-the groups, and the per-contact field overrides. A reader MUST reject
-a version byte other than 6 by falling back to the v3 importer, which
-rejects anything but 3; a v6 file is refused by a reader from before
-v6 (`full_backup_state_old_reader_rejects_richer_password_backup`).
+the groups, and the per-contact field overrides. A reader dispatches
+on the version byte: 7 to D4, 6 to D3, anything else to the v3
+importer, which rejects anything but 3.
 The file is at most 32 MiB and decompresses to at most 64 MiB; the
 whole snapshot is validated (names, field counts, avatar bytes and
 dimensions, unique ids) before any write, and the restore is one
 transaction on a fresh installation only
 (`full_backup_validation_rejects_invalid_state_before_mutation`).
 
-**D4. Guardian backup, v5** (`export_guardian_backup`). The v3
+**D4. Full backup, v7** (what `Vauchi::export_full_backup` writes
+today; ADR-080 point 7). Two payloads of one size behind a clear,
+authenticated header:
+
+```text
+header  = 0x07 || file_id(16) || salt_0(16) || salt_1(16)
+file    = header || P_0 || P_1, with |P_0| = |P_1|
+P_i     = AEAD_0x03(K_i, frame_i; AD = header)
+K_i     = HKDF-expand(HKDF-extract(none, Argon2id(password_i, salt_i)), "vauchi-backup-v7-payload", 32)
+frame_i = u32_be(len(z_i)) || z_i || zero bytes to the bucket
+z_i     = zlib(JSON snapshot)
+bucket  = 4096, 8192, ... doubling; past the last power of two that
+          fits twice in the 32 MiB file: (32 MiB - 49) / 2 - 41
+```
+
+The snapshot is D3's with `version: 7`. Exported from the real
+profile of an install with an app password, it also carries `duress`:
+the mask profile's rows re-encrypted under a fresh transfer key with
+that key, the app password's hash and salt, and the duress PIN's when
+one is set. A restore saves the credentials and re-encrypts the mask
+under the new device's mask key, so it locks as before and the duress
+PIN opens the same mask
+(`a_restored_install_opens_the_old_decoys_under_the_old_mask_with_the_duress_pin`).
+Such a file holds two identities, the real one and the mask's. On the
+real profile with a duress PIN, `export_full_backup_with_decoy` fills
+the other payload under a decoy backup password: the mask profile under
+the mask identity, locked with the duress PIN and with no duress of its
+own. The export refuses a backup or decoy password that unlocks the
+install or repeats the other, with one error
+(`a_backup_password_that_unlocks_the_install_is_refused`). The real
+payload takes a random slot. Without a decoy password, the other payload is a zero
+frame under a random key. Both payloads are padded to the bucket of the
+larger, and every export draws a fresh file id, salts and nonces. A
+reader derives both `K_i` before trying either, so a restore takes the
+same time whichever payload opens or neither, and every failure,
+including a payload taken from another file, is `DecryptionFailed`
+(`payloads_from_another_file_do_not_open_under_this_header`). A
+reader cannot check the payload it does not open. A reader from
+before v7 refuses the file
+(`full_backup_state_old_reader_rejects_richer_password_backup`);
+limits and validation are D3's.
+
+**D5. Guardian backup, v5** (`export_guardian_backup`). The v3
 `FullBackupEnvelope` of D2 (with `version: 5`), not the v6 snapshot,
 encrypted under a random 32-byte backup key `B`, which is
 split among guardians by Shamir's secret sharing (`key_shard.rs`, see
@@ -333,7 +374,7 @@ file   = header || AEAD_0x03(HKDF(salt, B, "vauchi-backup-v5-guardian"), zlib(JS
 `conf` lets a holder check a reconstructed key against the file before
 decrypting (`guardian_backup_key_matches`, constant time).
 
-**D5. What the app offers.** The backup wizard's default level is
+**D6. What the app offers.** The backup wizard's default level is
 *Full*; *Identity only* (v2) is the opt-in
 (`vauchi-app/src/ui/backup_recovery.rs`; ADR-058 amendment 2026-10-28,
 Option D). Both exports run the password strength check of D1:
@@ -354,11 +395,16 @@ key is held to the same password as the identity-only one.
 ### Security considerations
 
 - **A backup without its password reveals nothing** beyond its version
-  byte, salt and length, claim [S13](../claims.md):
+  byte, salts, file id and length (for v7, the bucket), claim
+  [S13](../claims.md):
   `v2_backup_encrypts_the_seed_and_leaks_no_key_material`,
   `test_v2_wrong_password`,
   `backup_debug_output_carries_no_secrets_or_contact_data`, vectors
-  entries `backup` (v3) and `backup_v6`. The v6 header is
+  entries `backup` (v3), `backup_v6` and `backup_v7`. The v7 header,
+  file id included, is authenticated
+  (`backup_v7_vector_opens_its_real_payload_under_its_header_only`,
+  `backup_v7_vector_imports_with_production_argon2id_and_refuses_a_wrong_password`).
+  The v6 header is
   authenticated, so a changed salt or version fails the tag
   (`full_backup_validation_authenticates_header_and_ciphertext`,
   `backup_v6_vector_decrypts_under_its_header_and_not_under_a_changed_one`),
@@ -367,14 +413,16 @@ key is held to the same password as the identity-only one.
   (`backup_v6_vector_imports_with_production_argon2id_and_refuses_a_wrong_password`).
 - A full backup contains every contact's shared key and card. Its
   strength against guessing is the password through Argon2id (B3),
-  held to the strength check of D1 like the v2 export (D5).
+  held to the strength check of D1 like the v2 export (D6).
 - The backup is the seed: see A's note on clones.
 
 ### Vectors
 
 `identity` (A2, A3 for index 0), `backup` (D2's key derivation and a
-complete v3 file) and `backup_v6` (D3's header, base key, final key
-and a complete file) in [Test Vectors](../vectors.md). The v5
+complete v3 file), `backup_v6` (D3's header, base key, final key
+and a complete file) and `backup_v7` (D4's header, the slot the
+password opens, its base key and payload key, and a complete file) in
+[Test Vectors](../vectors.md). The v5
 derivation is not in the vectors yet.
 
 ---
