@@ -28,9 +28,9 @@ make those statements true, as the code implements them today.
   [wire schemas](schemas.md) are generated from the wire types with the
   parser's bounds proved against it; CI fails when a copy here differs
   from Core's or an example stops validating.
-- **Honest about absences.** A missing approval step, a two-DH key
-  agreement that the code calls X3DH, the relay's view of timing: each
-  is written down where it belongs.
+- **Honest about absences.** A two-DH key agreement that the code
+  calls X3DH, a SPAKE2 library no one has audited, the relay's view of
+  timing: each is written down where it belongs.
 
 ## How to read it
 
