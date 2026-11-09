@@ -3,10 +3,6 @@
 
 # Disclosure Policy
 
-> **Draft for the maintainer's approval.** The scope and the safe-harbour
-> wording below are proposed text; until the maintainer approves them
-> here, the binding instruction is: write to security@vauchi.app.
-
 ## Contact
 
 - Email: **security@vauchi.app**
@@ -55,7 +51,7 @@ exists. Either way the fix is credited if you wish and listed in the
 changelog of this book and on the docs site's previous-analysis page;
 findings rated medium or above also get a CVE.
 
-## Safe harbour (proposed)
+## Safe harbour
 
 Research conducted in good faith, within the scope above, against your
 own identities and test data, without degrading the service for others
