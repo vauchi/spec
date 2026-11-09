@@ -122,10 +122,14 @@ bytes, not derived from the SMK, whose source cannot be read while the
 phone is locked. It is stored in the class of secure storage readable
 after the first unlock since boot, made with the identity or at the first
 open of an older one, never replaced, and destroyed by every shred with
-the SMK. Ratchet states and the mailbox tokens stored ahead for the next
-14 days are sealed under keys derived from it, in the same database file
+the SMK. Ratchet states and the mailbox tokens stored ahead for today and
+tomorrow are sealed under keys derived from it, in the same database file
 as the rest, so a received update still commits ratchet and card in one
-transaction (`storage/receive_key.rs`):
+transaction (`storage/receive_key.rs`). Each stored day carries the end of
+the locked window, 24 hours after the unlocked sync that stored it; every
+unlocked sync rewrites both days, and the next unlock catches up through
+the receive checkpoint (ADR-033 addendum 2026-11-09,
+`api/vauchi/receive_tokens_ahead.rs`):
 
 ```text
 ratchet key = HKDF(BRK, "vauchi-ratchet-receive-key-v1:" || contact id)
