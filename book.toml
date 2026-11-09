@@ -13,6 +13,11 @@ src = "src"
 [build]
 build-dir = "book"
 
+[preprocessor.editorial]
+command = "python3 scripts/editorial.py"
+renderers = ["html"]
+after = ["links"]
+
 [output.html]
 # Served at vauchi.app/spec behind kamal-proxy's path prefix, like the
 # docs at vauchi.app/docs (vauchi/private#875).
