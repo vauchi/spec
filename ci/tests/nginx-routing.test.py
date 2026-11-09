@@ -32,6 +32,7 @@ class SpecRoutingTests(unittest.TestCase):
         (public / "protocols/relay.html").write_text("Relay chapter")
         (public / "vectors/vauchi-protocol-vectors-v1.json").write_text('{"v":1}')
         (public / "build-info.json").write_text('{"sha":"routing-test"}')
+        (public / "indexnow-manifest.json").write_text('{"version":1}')
         (public / "404.html").write_text("Page not found")
         root.chmod(0o755)
         for path in public.rglob("*"):
@@ -79,6 +80,15 @@ class SpecRoutingTests(unittest.TestCase):
         cls.nginx.terminate()
         cls.nginx.wait(timeout=5)
         cls.nginx.stderr.close()
+
+    def test_deployment_metadata_requires_revalidation(self):
+        for prefix in ("", "/spec"):
+            for name in ("build-info.json", "indexnow-manifest.json"):
+                with self.subTest(prefix=prefix, name=name):
+                    status, headers, _ = self.request(prefix + "/" + name)
+                    self.assertEqual(status, 200)
+                    self.assertEqual(headers["Cache-Control"], "no-cache")
+                    self.assertEqual(headers["X-Content-Type-Options"], "nosniff")
 
     def request(self, path, method="GET"):
         connection = http.client.HTTPConnection("127.0.0.1", self.port, timeout=5)
