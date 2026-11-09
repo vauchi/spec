@@ -295,5 +295,5 @@ the system it resembles, this chapter says so, and
   [`--completes-needed`, `--marginals-needed`](https://www.gnupg.org/documentation/manuals/gnupg/GPG-Configuration-Options.html).
 - Local-first: Ink & Switch, [Local-first software (2019)](https://www.inkandswitch.com/essay/local-first/).
 - Social-recovery wallets: Vitalik Buterin,
-  [Why we need wide adoption of social recovery wallets (2021)](https://vitalik.eth.limo/general/2021/01/11/recovery.html);
+  [Why we need wide adoption of social recovery wallets (2021)](https://vitalik.eth.link/general/2021/01/11/recovery.html);
   [TechCrunch on Argent (2020)](https://techcrunch.com/2020/05/18/buzzy-ethereum-wallet-app-argent-comes-out-of-stealth).
