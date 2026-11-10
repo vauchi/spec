@@ -7,6 +7,11 @@ Each spec tag maps to the Core commit it was extracted from.
 
 ## Unreleased
 
+- S13 names the decoy payload and that a 6-digit duress PIN is the
+  biometric branch only; S14 adds that with biometric unlock the lock
+  screen is the same with or without duress, and its tests
+  (vauchi/private#1117, ADR-032 amended 2026-11-10).
+
 - Keys and Cards D4: the duress section's credential records
   `password_branch` when duress was set up with two real passwords on a
   device without biometric unlock (vauchi/private#1117, ADR-032 amended
