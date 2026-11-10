@@ -334,10 +334,17 @@ The snapshot is D3's with `version: 7`. Exported from the real
 profile of an install with an app password, it also carries `duress`:
 the mask profile's rows re-encrypted under a fresh transfer key with
 that key, the app password's hash and salt, and the duress PIN's when
-one is set. A restore saves the credentials and re-encrypts the mask
-under the new device's mask key, so it locks as before and the duress
-PIN opens the same mask
-(`a_restored_install_opens_the_old_decoys_under_the_old_mask_with_the_duress_pin`).
+one is set. The duress credential marks `password_branch: true` when
+it was set up under the password branch, where the app password and
+the duress credential both pass D1's rule because the device has no
+biometric unlock (ADR-032, amended 2026-11-10); the field is written
+only then, so a biometric-branch section is the same as before it
+existed, and a reader from before it refuses a password-branch one. A
+restore saves the credentials with their branch and re-encrypts the
+mask under the new device's mask key, so it locks as before and the
+duress PIN opens the same mask
+(`a_restored_install_opens_the_old_decoys_under_the_old_mask_with_the_duress_pin`,
+`a_restore_keeps_the_password_branch`).
 Such a file holds two identities, the real one and the mask's. On the
 real profile with a duress PIN, `export_full_backup_with_decoy` fills
 the other payload under a decoy backup password: the mask profile under
@@ -376,7 +383,7 @@ decrypting (`guardian_backup_key_matches`, constant time).
 
 **D6. What the app offers.** The backup wizard's default level is
 *Full*; *Identity only* (v2) is the opt-in
-(`vauchi-app/src/ui/backup_recovery.rs`; ADR-058 amendment 2026-10-28,
+(`vauchi-app/src/ui/backup_recovery/`; ADR-058 amendment 2026-10-28,
 Option D). Both exports run the password strength check of D1:
 `export_full_backup` has run it since `5101a890c`
 (vauchi/private#891), so the file that holds every contact's shared
@@ -733,11 +740,12 @@ the level is auditable.
 - `vauchi-core/src/backup/full_backup.rs`, `backup/snapshot/codec.rs`,
   `backup/snapshot/mod.rs`, `backup/contact_backup.rs`,
   `backup/key_shard.rs`; `api/vauchi/full_backup.rs`;
-  `vauchi-app/src/ui/backup_recovery.rs`
+  `vauchi-app/src/ui/backup_recovery/`
 - `vauchi-core/src/exchange/device_link/*`, `api/vauchi/identity.rs`;
   `vauchi-app/verification/device_link_machines.qnt`
 - `vauchi-core/src/api/app_password.rs`, `api/vauchi/security.rs`,
-  `api/vauchi/duress_concealment.rs`, `api/vauchi/duress_cover.rs`,
+  `api/vauchi/duress_concealment.rs`, `api/vauchi/duress_policy.rs`,
+  `api/vauchi/duress_cover.rs`,
   `sync/device_sync.rs`
 - `vauchi-core/src/card/mod.rs`, `card/field.rs`, `visibility.rs`,
   `api/vauchi/visibility.rs`, `sync/delta.rs`, `contact/trust.rs`,

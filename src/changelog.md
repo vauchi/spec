@@ -7,6 +7,14 @@ Each spec tag maps to the Core commit it was extracted from.
 
 ## Unreleased
 
+- Keys and Cards D4: the duress section's credential records
+  `password_branch` when duress was set up with two real passwords on a
+  device without biometric unlock (vauchi/private#1117, ADR-032 amended
+  2026-11-10). It is written only when true, so a biometric-branch
+  section is unchanged; a reader from before it refuses a
+  password-branch section. D6 and the source list name the
+  `backup_recovery/` module.
+
 - Keys and Cards D4 (new; vauchi/private#1117, ADR-080 point 7): the
   full backup is v7, two payloads of one size behind a clear header of
   version, random file id and one salt per payload, each payload bound
