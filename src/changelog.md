@@ -7,6 +7,12 @@ Each spec tag maps to the Core commit it was extracted from.
 
 ## Unreleased
 
+- In-Person Exchange says the multi-stage modes do not yet authenticate
+  the identity key their payload carries, and B12 names the one
+  exception A8 and Social Recovery C5 already state (a contact restored
+  and waiting takes the exchange's key); S17 says its third sentence
+  does not hold through the multi-stage modes (vauchi/private#1217).
+
 - Four sentences stop presenting design as code (vauchi/private#1229):
   Relay says purge is not the only route that carries an identity key
   (the recovery store's `owner_pk` and the guardian store's

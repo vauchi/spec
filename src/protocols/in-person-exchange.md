@@ -45,7 +45,9 @@ animated QR protocol (`exchange/multistage/`, transport key
 Bluetooth handshake of section B without a QR, and *Cable* runs the
 session of section A over USB or TCP. They are not specified in this
 chapter; what section B says about a handshake without QR pins
-applies to the radio-only modes.
+applies to the radio-only modes. The multi-stage modes do not yet
+authenticate the identity key the peer's payload carries
+(vauchi/private#1217).
 
 ---
 
@@ -513,8 +515,10 @@ Bluetooth exchange and refuses its Bluetooth events with
 `InvalidState` (vauchi/private#893). An exchange never rekeys a
 contact that already exists: a repeat exchange refreshes its card and
 keeps the shared key and ratchet of the first (`save_exchanged_contact`,
-vauchi/private#941). This holds for every in-person completion path,
-QR and multi-stage included.
+vauchi/private#941), except a contact restored from a guardian backup
+and waiting for its rekey, which takes the exchange's (A8, Social
+Recovery C5). This holds for every in-person completion path, QR and
+multi-stage included.
 
 **B13. Reciprocity over the link.** After its contact is durably
 saved, the initiator sends an ack: `0x01 || AEAD(SK, our_token; AAD =
