@@ -17,7 +17,9 @@
 When a person edits their card, each contact that may see the changed
 fields receives exactly those changes, from that person, once, in
 order, and nobody else learns what changed: not the relay, not a
-network observer, not someone who later steals a device's keys. Each
+network observer, and not someone who later steals a device's keys,
+except on the paths without forward secrecy that Security
+considerations lists (genesis envelopes, C5, and own-device sync). Each
 of the person's own devices sees the same contacts and the same card.
 
 ## Actors

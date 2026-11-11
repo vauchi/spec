@@ -412,8 +412,9 @@ Core API with tests, and the new phone's recovery screen offers it
 once a guardian has handed back; labels come back with their
 members and the fields they show, and each contact with its own
 visibility rules (a backup made before the labels' fields were kept
-restores them showing none). The rekey of the restored contacts (section C, C1 to C6) is Core API
-with tests and leaves with each sync.
+restores them showing none). The rekey offers of the restored contacts (section C, C1 to C6) are
+Core API with tests and leave with each sync; no contact accepts one
+yet (C3), so no rekey completes.
 The guardian **tokens** of A4 do reach the relay today,
 for up to nine recovery-trusted contacts. A tenth makes the set 2 050
 bytes, over the relay's 2 048, and the whole set is refused without
@@ -619,10 +620,10 @@ after a device holding the identity's keys was stolen unlocked
 backup, a linked device) restores the same identity and rekeys nothing.
 The rotation is being redesigned around a next identity registered in
 advance with policy guardians, a certificate for online contacts and
-recognition for contacts met in person (design
-`2026-11-03-pinned-guardian-policy`, P25, P26, P31); until the
-certificate exists, C3 accepts nothing. In person, a contact that
-recognizes the owner MAY rotate to the identity the owner shows only when
+recognition for contacts met in person (vauchi/private#796, P25, P26,
+P31); until the certificate exists, C3 accepts nothing. Planned, not
+built (no next identity is registered today): in person, a contact
+that recognizes the owner MAY rotate to the identity the owner shows only when
 that identity matches the hash of the registered next identity the
 contact pinned: the thief cannot produce it, and since it is fixed in
 advance two meetings cannot give two successors. An identity that does

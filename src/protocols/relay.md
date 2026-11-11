@@ -175,9 +175,10 @@ signature the relay checks, here and in Social Recovery A4 and B3,
 goes through dalek `verify_strict`, as Core's do: aws-lc's verifier
 accepted the identity point as a key with `S = 0` for any message
 (`test_verify_purge_ed25519_rejects_the_identity_point_as_a_key` and
-its guardian and recovery-owner twins; vauchi/private#944). This is
-the one route where an identity key reaches the relay, by design:
-deletion is the identity's own signed act (Keys and Cards, C3; the
+its guardian and recovery-owner twins; vauchi/private#944). Purge
+sends the identity key itself, by design: deletion is the identity's
+own signed act (the recovery store's `owner_pk` and the guardian
+store's `designator_pk` carry one too, see the routes below) (Keys and Cards, C3; the
 hard-shred lane `hard_shred_after_grace_fanout_over_outer_hop_only`).
 
 **A8. Response padding** (`padding.rs`). Every OHTTP reply is padded
@@ -378,7 +379,8 @@ bad inner JSON) reaches the client as a `502` from the outer relay.
 - **Public keys never route traffic**, claim [S4](../claims.md),
   partial. Mailboxes are 64-hex tokens derived per day from a shared
   key and the recipient's identity key (Card Update and Sync, B8);
-  the relay stores no key, and a token from one day does not name the
+  the relay keeps no key for mailbox routing (recovery proofs store an
+  owner key), and a token from one day does not name the
   mailbox of the next. Partial: cross-day unlinkability is a design
   argument backed by `mailbox_token.spthy` in Core's round 8 and by
   the token tests, not by an experiment against the relay's logs; a

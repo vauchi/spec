@@ -7,6 +7,16 @@ Each spec tag maps to the Core commit it was extracted from.
 
 ## Unreleased
 
+- Four sentences stop presenting design as code (vauchi/private#1229):
+  Relay says purge is not the only route that carries an identity key
+  (the recovery store's `owner_pk` and the guardian store's
+  `designator_pk` do too) and keeps no key only for mailbox routing;
+  Card Update and Sync's goal names the paths without forward secrecy;
+  Social Recovery says rekey offers leave with each sync but no contact
+  accepts one yet (C3), and marks the next-identity rotation in person
+  as planned. The design that rotation follows is cited by its issue,
+  not by a private slug.
+
 - S13 names the decoy payload and that a 6-digit duress PIN is the
   biometric branch only; S14 adds that with biometric unlock the lock
   screen is the same with or without duress, and its tests
