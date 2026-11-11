@@ -79,8 +79,7 @@ Each spec tag maps to the Core commit it was extracted from.
   and S16 and S17 say so (vauchi/private#796, P11 to P32).
 
 - Social Recovery A7, B2, C3 to C6: the guardian delivery carries the
-  guardian's token and an in-person vouch attaches it; a rekey that is
-  provably the recovered contact's is accepted without asking, its proof
+  guardian's token and an in-person vouch attaches it; a rekey that is provably the recovered contact's is accepted without asking once the policy guardians' certificate exists; until then every offer is dropped, its proof
   judged without expiry; a contact met again folds the old one; the
   in-person continuation, ratchet kind `0x0e` (Update and Sync, B5); the
   new phone completes with the answer; resends stop after 14 days

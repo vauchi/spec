@@ -768,7 +768,7 @@ recovery only while the old key is still in the owner's hands.
 Owner: `designated` (tokens on the relay) → `lost` → `claim shown` →
 vouchers 0..t → `proof uploaded` → `backup restored` (A6) → old
 contacts pending rekey (C, open). Guardian: `holds share` → `vouched
-and re-sealed`. Contact: proof seen → verdict shown → `accept`,
+and re-sealed`. Contact (Core API only; no shipped screen reaches it yet): proof seen → verdict shown → `accept`,
 `reject` or `remind later` (`RecoveryResponse`, saved per claim and
 contact, with a reminder time the shell supplies; the 7-day
 `RecoveryReminder` default is not on this path).

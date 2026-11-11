@@ -31,8 +31,7 @@ OHTTP window keys.
   fresh, to tell the two apart (vauchi/private#946); recompute every
   past token of a channel once it also obtains that channel's shared
   key.
-- **Cannot** (claims): read a card or an update (S1); forge, replay
-  or roll back an update (S2); learn a client's address, against a
+- **Cannot** (claims): read a card or an update (S1); forge, replay or roll back an update (S2, partial); learn a client's address, against a
   single host (S3, partial while one operator runs both hops); learn
   an identity from a mailbox token (S4, partial as above); learn
   exact lengths (S5, partial); substitute a key inside a link
@@ -149,7 +148,7 @@ user granted.
 - **Can**: send what it likes over its own channel; name a relay URL
   in its QR, which is stored and not routed by; send a resync request
   once a day; keep what it was sent after a grant is revoked; as a
-  helper, vouch for a photographed recovery claim within 48 hours.
+  helper, vouch for a photographed recovery claim for up to 192 hours.
 - **Cannot**: receive a field it was not granted (Keys and Cards G2);
   raise its own trust level (S10); impersonate another contact (the
   delta signature binds sender and recipient, S2); learn the owner's
