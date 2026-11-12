@@ -7,6 +7,15 @@ Each spec tag maps to the Core commit it was extracted from.
 
 ## Unreleased
 
+- Keys and Cards D4: the real payload carries `device_registry`, and a
+  full backup restore registers the install as a new device with a
+  random index in the upper half of the range and a registry version of
+  at least the restore time, keeping the backed-up devices active.
+  Before, a restore signed as the backed-up device with a fresh key, so
+  contacts that pinned that device refused its card deltas
+  (vauchi/private#1247). The A security note now separates the identity
+  backup, which still keeps the device index, from the full backup.
+
 - In-Person Exchange says the multi-stage modes do not yet authenticate
   the identity key their payload carries, and B12 names the one
   exception A8 and Social Recovery C5 already state (a contact restored

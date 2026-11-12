@@ -150,9 +150,10 @@ input's meaning bumps the version in the string.
   and future, on every device index; A3 means a linked device is a
   full copy, not a sub-identity (see E and [S15](../claims.md)).
   Per-device subkeys that would contain a leak are tracked work.
-- Two installs restored from one backup are indistinguishable to the
-  protocol and both start at the backup's device index
-  (`Identity::import_backup`'s note).
+- Two installs restored from one identity backup (D1) are
+  indistinguishable to the protocol and both start at the backup's
+  device index (`Identity::import_backup`'s note). A full backup (D4)
+  restores with a new random device index instead.
 
 ---
 
@@ -345,6 +346,22 @@ mask under the new device's mask key, so it locks as before and the
 duress PIN opens the same mask
 (`a_restored_install_opens_the_old_decoys_under_the_old_mask_with_the_duress_pin`,
 `a_restore_keeps_the_password_branch`).
+The real payload also carries `device_registry`, the registry the
+install signed with, naming each device's signing key; a decoy payload
+and older files have none, and a reader from before it refuses a file
+that has one. A restore registers the install as a **new device** of the
+identity, never as the backed-up one: signing as that device with a
+fresh key would make every contact that pinned it refuse its card deltas
+for good (vauchi/private#1247). It takes a device index at random in the
+upper half of the `u32` range, clear of the indexes linking hands out
+from 0 and of any device the registry lists, adds that device with its
+new signing key, and raises the registry version to at least the
+restore time in seconds, to avoid reusing the backup's old version.
+Contacts still apply their registry freshness checks. The backed-up devices stay
+active; at the device limit the backed-up device gives its place to the
+new one. Without a registry in the file, the new device is the only one
+listed. The next sync pushes the registry to every contact
+(`restored_install_card_delta_tests.rs`).
 Such a file holds two identities, the real one and the mask's. On the
 real profile with a duress PIN, `export_full_backup_with_decoy` fills
 the other payload under a decoy backup password: the mask profile under
