@@ -7,6 +7,14 @@ Each spec tag maps to the Core commit it was extracted from.
 
 ## Unreleased
 
+- Card Update and Sync C5 describes Core v0.106.1's bounded wrapper for
+  oversized registry controls, missing-registry bootstrap and one
+  stateless ACK to the requesting device. Small envelopes and signature
+  inputs are unchanged. It states the old-reader limit, the ACK
+  forward-secrecy exception and the separate maximum-fleet private-message
+  limitation, as implemented in
+  [Core!2353](https://gitlab.com/vauchi/core/-/merge_requests/2353).
+
 - Keys and Cards D4: the real payload carries `device_registry`, and a
   full backup restore registers the install as a new device with a
   random index in the upper half of the range and a registry version of

@@ -342,14 +342,54 @@ that holds a contact's shared key but no session (a linked device
 that never did the exchange) can send a signed safety alert in a
 ratchet message rooted directly in the shared key
 (`vauchi-genesis-root-v1`, `vauchi-genesis-responder-v1`); the
-receiver opens it statelessly, verifies the inner identity signature
-over both identities, the header and the alert, and persists the
-alert, its nonce and the new session in one transaction. A card delta
+receiver opens it statelessly and verifies the identity signature
+over both identities, the header and the payload. It persists an
+accepted alert and its nonce atomically, initializing a missing legacy
+receive channel when needed and preserving an established ratchet. A card delta
 or cover payload to a peer device whose device-pair ratchet has this
 side as a responder that has not yet received also goes out this way
 (`propagation.rs`). Every genesis envelope is a fresh message 1 and
 the sender keeps no session from it (`persist_session: false`), so no
 genesis envelope has forward secrecy.
+
+Registry PUSH and ACK controls also use genesis. A restored installation
+that lacks the peer's device registry can open the authenticated reply
+before selecting a device-pair ratchet. Every registry ACK is sent as one
+stateless genesis message to the requesting device; only an unknown
+device id uses the identity mailbox. Active state describes the identity
+relationship and does not prove that a restored device holds our registry.
+These handlers persist registry and activation state without installing
+a genesis session, and roll back a failed genesis-control commit.
+
+Since Core v0.106.1, an oversized registry control can use this plaintext
+wrapper inside the ordinary encrypted ratchet message:
+
+```text
+0x15 || expanded_len(u32, BE) || compressed_len(u32, BE) ||
+zlib(original_0x05_plaintext) || zero_padding_to_4092_bytes
+```
+
+The original signed bytes and signature inputs are unchanged. Small
+`0x05` plaintexts keep their original representation. Only complete
+registry PUSH/ACK payloads may use the wrapper; private card, cover and
+alert content cannot. Opening requires exactly one finished zlib stream,
+exact input/output consumption, zero padding and a non-nested original
+envelope, followed by the existing signature and registry checks.
+The advertised length cannot grow the decompression buffer: expansion
+is capped at 16571 bytes. Registry JSON is capped at 8192 bytes before
+deserialization, with at most ten active devices and exactly 64 bytes
+for a device signature when present. The packed wire plaintext is
+exactly 4092 bytes, fitting the existing padded bucket rather than a
+larger size class.
+
+Old readers cannot open the new wrapper. The tested restored-card flow
+requires corrected endpoints; restoration with an older Active peer that
+still sends an ordinary ACK is not certified. Maximum-fleet control
+roundtrips do not establish maximum-fleet private genesis delivery: private
+content retains its existing plaintext limit. Registry ACKs share the
+genesis forward-secrecy exception above; ordinary card traffic retains
+its independent device-pair ratchets. Implemented and tested in
+[Core!2353](https://gitlab.com/vauchi/core/-/merge_requests/2353).
 
 ---
 
