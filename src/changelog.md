@@ -7,6 +7,14 @@ Each spec tag maps to the Core commit it was extracted from.
 
 ## Unreleased
 
+- Claim S11 names the test that backs healing after a compromise,
+  `a_stolen_state_stops_opening_messages_after_the_device_uses_a_key_made_later`,
+  and the window it shows: a stolen ratchet state still opens the
+  contact's next message after the device's first reply and nothing
+  after the second. The statement said the channel heals at a fresh
+  exchange of ephemeral keys; it now says which one. S11 stays partial
+  for the two paths without forward secrecy (vauchi/private#950).
+
 - Claims S2 and S9: three `Backed by` sentences named a test without
   its file, or beside another test's file; each now names the file the
   test is in. `check:claim-names` requires that from now on: a name in a

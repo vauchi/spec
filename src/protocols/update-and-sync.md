@@ -530,9 +530,13 @@ normal session would, tag and group changes included
 - **Old messages stay secret after a compromise**, claim
   [S11](../claims.md): `test_dr_forward_secrecy`,
   `test_forward_secrecy_compromised_state`,
-  `test_dr_skipped_message_limit`, which never exceeds the limit. Each
-  message key is deleted after use; a stolen ratchet state opens
-  nothing earlier and the channel heals at the next DH step. Paths
+  `test_dr_skipped_message_limit`, which never exceeds the limit, and
+  `a_stolen_state_stops_opening_messages_after_the_device_uses_a_key_made_later`.
+  Each message key is deleted after use; a stolen ratchet state opens
+  nothing earlier. The channel heals at the first DH step that uses a
+  key the device made after the theft: the stolen state still opens
+  the peer's next message after the device's first reply, whose key
+  it held, and nothing after the second reply. Paths
   without forward secrecy, which the claim does not cover: every
   genesis envelope (C5), card deltas sent that way included; the
   device-pair initiator's first chain, rooted in the peer's static
