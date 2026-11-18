@@ -1070,7 +1070,7 @@ is over.
 |---|---|
 | Payload signature does not verify, or names our own identity | `Failed`, no confirm, `FAI3` shown |
 | Card too large, unparsable, too many fields, a field invalid | `Failed`, no confirm, `FAI3` shown |
-| Commitment hash or ciphertext does not open | `Failed` |
+| Commitment hash or ciphertext does not open | `Failed`, no `FAI3`; a restarted peer's new opening re-handshakes (E11) |
 | Confirm or done tag does not verify | ignored; the next frame decides |
 | Frame of another session, `FAI3` included | ignored |
 | Frame under a retired prefix | ignored, "older version" shown |
