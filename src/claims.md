@@ -161,8 +161,17 @@ Extracted on 2026-10-28 from the security-claims page of vauchi.app/docs, itself
 - **Statement**: Restoring from guardians needs the threshold of guardians' shares; a member of the same recovery group can stand in for an absent guardian; each side rekeys only with the real counterpart.
 - **If false**: A single guardian, or an impostor, recovers someone else's identity.
 - **Status**: partial
-- **Backed by**: Tamarin `social_recovery.spthy`, lemmas `backup_needs_both_guardians` and `a_group_mate_can_stand_in` for the first two sentences, with the Shamir split, sealing, response and restore as Core API under test (Social Recovery A). Partial: the guardian backup ships (sent on designation, refreshed, handed back), and the restore that keeps the same identity (Social Recovery A11) is planned. The third sentence concerns compromise rotation (Social Recovery C): it is backed by `john_rekeys_only_with_the_real_alice` and `alice_rekeys_only_with_the_real_john` for a single recovery, and Core's rekey accepts nothing until the policy guardians' certificate exists (vauchi/private#796). A contact restored and waiting takes the key of an in-person exchange (Social Recovery C5); through the multi-stage modes, which do not yet authenticate the peer's identity key, the third sentence does not hold (vauchi/private#1217).
+- **Backed by**: Tamarin `social_recovery.spthy`, lemmas `backup_needs_both_guardians` and `a_group_mate_can_stand_in` for the first two sentences, with the Shamir split, sealing, response and restore as Core API under test (Social Recovery A). Partial: the guardian backup ships (sent on designation, refreshed, handed back), and the restore that keeps the same identity (Social Recovery A11) is planned. The third sentence concerns compromise rotation (Social Recovery C): it is backed by `john_rekeys_only_with_the_real_alice` and `alice_rekeys_only_with_the_real_john` for a single recovery, and Core's rekey accepts nothing until the policy guardians' certificate exists (vauchi/private#796). A contact restored and waiting takes the key of an in-person exchange (Social Recovery C5); through the multi-stage modes only once the peer's identity signature verified and the peer said it saved (In-Person Exchange E8, S18).
 - **Section**: [social-recovery](protocols/social-recovery.md)
+
+## S18. A multi-stage exchange saves only the identity that signed it, after the peer accepted
+
+- **Attacker**: Someone who controls what the cameras read, films both screens and knows the public keys of the user's contacts.
+- **Statement**: Through Hover or TapHoverShake a phone saves a contact only under an identity whose holder signed that session's payload, only after the peer, in that session, accepted it, and believes the peer saved only when it did.
+- **If false**: A person who knows a contact's public key replaces the card the user holds for that contact, or one phone saves a contact the other refused.
+- **Status**: planned
+- **Backed by**: Tamarin `multistage_exchange.spthy`, lemmas `card_authentic`, `peer_accepted_before_save` and `peer_saved_is_true`, each falsified by its control (`-DNO_PAYLOAD_SIG`, `-DLEGACY_TAG`, `-DCONFIRM_BEFORE_VERIFY`, `-DNO_LABEL`) and kept under `-DREBIND` and `-DACCEPT_IN3D`; tests in `multistage_identity_binding_tests.rs`, `multistage_payload_tests.rs`, `multistage_final_frame_tests.rs` and `multistage_restored_rekey_tests.rs`. The unkeyed end-of-display frames and a lost last frame are outside the statement (In-Person Exchange E, security considerations).
+- **Section**: [in-person-exchange](protocols/in-person-exchange.md)
 
 ## Not claimed
 

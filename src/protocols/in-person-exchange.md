@@ -5,13 +5,15 @@
 
 > **Status: extracted 2026-10-28** from `vauchi/core` `612992b0b`;
 > checked against `vauchi/core` `a9a911b0a` on 2026-10-30.
-> Three protocols share this chapter because they share the goal, the
-> session state machine and the reciprocity confirmation that follows:
-> the **mutual QR exchange** (section A), the **Glance exchange**, one
-> QR plus Bluetooth (section B), and the **NFC tap** (section C).
-> Section D is the reciprocity confirmation all three end with.
+> Four protocols share this chapter because they share the goal and
+> the reciprocity confirmation that follows: the **mutual QR exchange**
+> (section A), the **Glance exchange**, one QR plus Bluetooth (section
+> B), the **NFC tap** (section C) and the **multi-stage animated QR**
+> of Hover and TapHoverShake (section E). Section D is the reciprocity
+> confirmation they end with. Section E checked against `vauchi/core`
+> `3bd09f33c` on 2026-11-18.
 > Claims backed: [S6](../claims.md), [S7](../claims.md),
-> [S8](../claims.md).
+> [S8](../claims.md), [S18](../claims.md).
 
 ## Goal
 
@@ -40,14 +42,15 @@ contact.
 
 Other in-person modes exist in the app's mode list
 (`exchange/mode.rs`): *Hover* and *TapHoverShake* run the multi-stage
-animated QR protocol (`exchange/multistage/`, transport key
-`vauchi-multistage-v1`), *Bump*, *Shake* and *Magic* run the
+animated QR protocol of section E, *Bump*, *Shake* and *Magic* run the
 Bluetooth handshake of section B without a QR, and *Cable* runs the
-session of section A over USB or TCP. They are not specified in this
-chapter; what section B says about a handshake without QR pins
-applies to the radio-only modes. The multi-stage modes do not yet
-authenticate the identity key the peer's payload carries
-(vauchi/private#1217).
+session of section A over USB or TCP. The radio-only modes and Cable
+are not specified in this chapter; what section B says about a
+handshake without QR pins applies to the radio-only modes. The app
+offers only Glance, Hover and Link, in its picker, a remembered choice
+and its fallback when a mode cannot run (`is_offered` in
+`ui/exchange/mode_selection.rs`); the other modes are deferred, their
+engines kept and tested but not offered.
 
 ---
 
@@ -517,8 +520,9 @@ contact that already exists: a repeat exchange refreshes its card and
 keeps the shared key and ratchet of the first (`save_exchanged_contact`,
 vauchi/private#941), except a contact restored from a guardian backup
 and waiting for its rekey, which takes the exchange's (A8, Social
-Recovery C5). This holds for every in-person completion path, QR and
-multi-stage included.
+Recovery C5); through the multi-stage modes it takes it only once the
+peer said it saved (E8). This holds for every in-person completion
+path, QR and multi-stage included.
 
 **B13. Reciprocity over the link.** After its contact is durably
 saved, the initiator sends an ack: `0x01 || AEAD(SK, our_token; AAD =
@@ -863,6 +867,261 @@ exchange converges.
 The token pair of D1 for the QR tier is in `qr_symmetric`
 ([Test Vectors](../vectors.md)), with the escrow gate and slots of
 D2. A signed `0x03` payload of D3 is a candidate.
+
+---
+
+## E. Multi-stage animated QR: Hover and TapHoverShake
+
+Both phones show a cycling sequence of QR frames, front screen to front
+camera, and each reads the other's. The frames carry the whole card, so
+the exchange needs no radio and no relay. TapHoverShake adds a shake
+check (E10); it is deferred and not offered (see the mode list above),
+so the app runs this protocol through Hover.
+
+### Message flow
+
+```text
+Alice                                                     Bob
+  | 1 INI3(sid_A, eph_A, ch_A, name_A[, relay_A])     INI3 for Bob
+  | 2 T = HKDF(X25519(eph_A, eph_B), "vauchi-multistage-v1")
+  | 3 DAT4: chunks of C_A = Enc(rk_A, P_A) under T, with an ACK
+  |   of Bob's chunks                                 DAT4 for Bob
+  | 4 RVL4(sid_A, rk_A)        Alice holds C_B, Bob acked all of C_A
+  | 5 open C_B with rk_B; check ch_B and P_B (E3, E6)
+  | 6 CNF4(sid_A, rk_A, tag_CNF)        only after every check passed
+  | 7 Bob's CNF4 verifies: Finalized; the app saves Bob
+  | 8 DON4(sid_A, rk_A, tag_DON)        only after the save succeeded
+  | 9 saved and Bob's DON4 read: BTH4(sid_A, rk_A, tag_DON) for 3 s
+  | 10 reciprocity confirmation (D3)
+```
+
+`P = 0x02 || id || sig || card`: the sender's identity key, its
+signature over this session (E3) and its card.
+
+### Normative operations
+
+Source: `vauchi-core/src/exchange/multistage/` (`session.rs`,
+`qr_codec.rs`, `payload.rs`, `confirmation.rs`, `commitment.rs`,
+`chunker.rs`, `accel_envelope.rs`); orchestration
+`vauchi-app/src/orchestrator/multi_stage_machine.rs`,
+`ui/app_engine/multi_stage_exchange.rs`; persisting
+`vauchi-core/src/api/vauchi/exchange.rs`.
+
+**E1. Frames** (`qr_codec.rs`). A frame is a four-character prefix,
+the eight-character training header of the link trainer, which carries
+the layout and read counts and no secret, and a base45 body, drawn in
+QR alphanumeric mode at error correction L. The prefixes are `INI3`
+(opening), `DAT4` (data), `RVL4` (reveal), `CNF4` (confirm), `DON4`
+(done), `BTH4` (both), `FAI3` (fail) and `SHK3` (shake envelope). A
+frame under a retired prefix (`INI2`, `IN2D`, `DATA`, `VRFY`, `CONF`,
+`RDYY`, `FAIL`, `SHAK`, `CMBO`, `DAT3`, `IN3D`, `FIN3`, `DON3`,
+`BTH3`) changes
+nothing and is reported as coming from an older version: builds on
+either side of a prefix change cannot complete this exchange. A phone
+ignores a frame that carries its own session id, its reflection in the
+other screen.
+
+**E2. Opening and transport key.** Each session draws a 16-byte session
+id, a fresh X25519 ephemeral key and a random 32-byte reveal key. The
+`INI3` body is the session id, the ephemeral key, the commitment hash,
+the display name with a two-digit length, a flags byte and, when its
+flag is set, the relay URL with a three-digit length, validated as a
+relay URL at parse time in builds with networking. A session accepts an `INI3` only while it
+advertises, and then derives
+
+```text
+T  = HKDF-SHA256(salt none, X25519(eph_own, eph_peer), "vauchi-multistage-v1")
+C  = XChaCha20-Poly1305(rk, P)
+ch = SHA-256(rk || C || ctx),  ctx = len32_be(relay) || relay, or empty
+```
+
+A non-contributory X25519 result fails the session (`handle_init`).
+`C` and `ch` are made in `commitment.rs`.
+
+**E3. Payload** (`payload.rs`).
+
+```text
+P   = 0x02 || id(32) || sig(64) || card_json
+sig = Ed25519_id("vauchi-multistage-payload-v2" || sid || eph || id
+                 || len16_be(relay) || relay || card_json)
+```
+
+`sid`, `eph` and `relay` are the sender's own, as its `INI3` shows
+them; `card_json` is its contact card. The identity signs inside the
+session constructor and its key is not kept (`for_identity`). A
+receiver MUST check, in this order: version 2; at least 97 bytes; a
+card of at most 65536 bytes (`MAX_CARD_SIZE_BYTES`), before the
+signature is checked; the signature, under the identity key the
+payload carries, over the peer's session id, ephemeral and relay URL
+as its `INI3` showed them; an identity that is not its own, so two
+devices of one identity do not exchange; and a card that parses, has
+at most 200 fields and whose every field validates. A failure fails
+the session, and no confirm leaves the phone. The signature covers the
+sender's side only, because a payload is committed before its peer is
+known; the confirm (E7) binds it to this session.
+
+**E4. Data.** The commitment ciphertext `C` is cut into chunks, sized
+once from the read rate the peer has reported, so that indices and the
+ACK bitmap stay valid for the whole transfer. A `DAT4` frame carries
+the session id, the chunk index and total, the sender's ACK bitmap of
+the peer's chunks, a CRC-16 and the chunk sealed with
+ChaCha20-Poly1305 under `T`, a random 12-byte nonce and the associated
+data `"vauchi-multistage-data-v4" || sid || index_le16 || total_le16
+|| ack`, so an ACK is authenticated with the chunk it travels with. A
+`DAT4` from a session other than the bound peer's, or whose total is
+zero, whose index is not below its total, or whose total differs from
+that of the first chunk that opened, is dropped before the phone keeps
+anything of it. A chunk that does not open is dropped and counted, and
+the phone sets up its receive buffers only once a chunk has opened.
+
+**E5. Reveal.** `RVL4` is the session id and the reveal key. A phone
+shows it once it holds every chunk of the peer and the peer has
+acknowledged every chunk of its own, and until its checks of E6 pass.
+A reveal read while the phone is still transferring is kept and used
+once the last chunk arrives.
+
+**E6. Checks before a confirm.** With the peer's reveal key a phone
+checks the peer's commitment hash in constant time, opens `C` and
+checks the payload (E3). Only when all of them pass does it confirm:
+no confirm tag is computed before (`tag_for` returns none until the
+peer's payload is open).
+
+**E7. Confirm and done** (`confirmation.rs`).
+
+```text
+K   = HKDF-SHA256(salt none, T, "vauchi-multistage-confirm-v3")
+tag = HMAC-SHA256(K, label || sid_s || sid_r || eph_s || eph_r
+                  || ch_s || ch_r || SHA-256(P_s) || SHA-256(P_r))
+```
+
+`label` is `"CNF"` in a confirm and `"DON"` in a done; `s` is the
+sender, `r` the receiver. `CNF4` and `DON4` are the session id, the
+reveal key and the tag: 132 characters with the header, QR version 5,
+the size of the opening frame. A phone that has passed its checks and
+reads its peer's `CNF4`, or a `DON4`, whose tag verifies is
+Finalized. A tag that does not verify is ignored, as a misread is, and
+the peer's next frame decides; a peer that re-handshakes (E11) shows
+frames bound to its old partner until it does. A confirm or done read
+before the phone's own checks finished is kept with its label and
+checked when they finish. A confirm or done from another session id is
+ignored.
+
+**E8. Saving.** On Finalized the app saves the identity and card the
+payload verified for (`received_peer`) as an exchanged contact with
+`T` as its shared key, seeds the Double Ratchet as in A8, and records
+reciprocity Pending, which relay sync resolves (D3). The contact, its
+ratchet and a restored contact's new key are written in one storage
+transaction, so a failed write leaves none of them behind. Only after the
+save succeeded does it tell the session (`mark_saved`), which then
+shows `DON4` in place of `CNF4`. A failed save fails the exchange
+(`save_failed`): no done is shown, and the phone shows `FAI3` (E9). A repeat exchange keeps the
+first exchange's keys (B12). A contact restored from a guardian backup
+and waiting for its rekey (Social Recovery C5) takes `T` only once
+the peer's verified done tag has been read, in `DON4` or `BTH4`
+(`save_exchanged_contact_before_peer_saved`, then
+`save_exchanged_contact`); until then it gets the new card, keeps its
+old key and goes on waiting.
+
+**E9. Ending.** A `DON4` whose done tag verifies tells a phone its peer
+saved. A phone that saved and read its peer's done shows `BTH4`, the
+done frame's layout and tag under its own prefix, for 3 seconds; a
+saved phone that reads its peer's `BTH4` and verifies its tag stops at
+once and knows its peer saved, though it may never have read a `DON4`.
+A phone that has not saved neither shows nor obeys `BTH4`, and a
+`BTH4` whose tag does not verify is ignored. Without either, a finalized phone keeps showing its frame
+for 60 seconds.
+
+A phone whose check of the peer's payload failed (E3), or whose save
+failed (E8), shows `FAI3`, its own session id, for 3 seconds
+(`FAIL_LINGER`) and then nothing, so its peer stops at once instead of
+waiting out its timeout; the app shows the failure when the 3 seconds
+are over. A phone acts on a `FAI3` only from the peer it is bound to,
+and never once Finalized: the frame carries no tag, and its session id
+is on the sender's screen. Failures a restarted peer could explain (a
+commitment that does not match, a ciphertext that does not open) show
+nothing and leave the re-handshake of E11 possible. `FAI3` carries no
+tag: it ends a display or fails an exchange that has not finalized, and
+never saves, rekeys or confirms anything.
+
+**E10. TapHoverShake.** The phones also record a shake. `SHK3` carries
+the motion envelope sealed under `T` (`accel_envelope.rs`), interleaved
+with the confirm. While a phone still records, a confirm it reads waits
+in Confirming, so the envelope can still be exchanged, and is applied
+when the recording stops.
+
+**E11. Peer restart** (ADR-071). A phone left past its opening by a
+peer that restarted re-handshakes with that peer's new opening: it
+keeps its own session id, ephemeral key, reveal key and commitment,
+forgets the peer's, and binds to the new one. Its payload signature,
+over its own values only, stays valid.
+
+### State machine
+
+`ProtocolState` (`types.rs`): `Idle` → `Advertising` (first frame
+shown) → `Discovered` (peer `INI3`) → `Transferring` → `Verifying`
+(E5) → `Confirming` (E6) → `Finalized` (E7); `Failed` from any state.
+`Complete` and `RetryReady` stay in the enum for the bindings and are
+not entered. The app's machine adds `Completed` when the ending of E9
+is over.
+
+### Failure cases
+
+| Case | Result |
+|---|---|
+| Payload signature does not verify, or names our own identity | `Failed`, no confirm, `FAI3` shown |
+| Card too large, unparsable, too many fields, a field invalid | `Failed`, no confirm, `FAI3` shown |
+| Commitment hash or ciphertext does not open | `Failed` |
+| Confirm or done tag does not verify | ignored; the next frame decides |
+| Frame of another session, `FAI3` included | ignored |
+| Frame under a retired prefix | ignored, "older version" shown |
+| Save fails | `Failed`, no done, `FAI3` shown |
+| Last frame lost | one phone saved, the other did not; the saved contact stays Pending (D) |
+
+### Security considerations
+
+The attacker controls every frame channel: Tamarin
+`multistage_exchange.spthy` lets it read, drop, reorder and inject
+frames, and film either screen. Proven there: a saved card is the card
+the holder of that identity committed (`card_authentic`); a phone
+saves only after its peer, in that session, accepted it
+(`peer_accepted_before_save`); a done a phone believes is true
+(`peer_saved_is_true`); and the three still hold with two bindings of
+one opening (E11, `-DREBIND`) and with `IN3D` accepted again
+(`-DACCEPT_IN3D`). Each mechanism has a control that falsifies its
+lemma: no payload signature (`-DNO_PAYLOAD_SIG`), the unkeyed tag of
+earlier builds (`-DLEGACY_TAG`), a confirm before the checks
+(`-DCONFIRM_BEFORE_VERIFY`) and one label for both tags
+(`-DNO_LABEL`). Card validity, two devices of one identity, the
+deferred rekey (E8) and reciprocity are outside the model.
+
+In practice the two phones are held facing each other, 7 to 14 cm
+apart. To take part an attacker must put their own screen in front of
+the user's camera, which a bystander cannot do unnoticed, and filming
+both screens at once is hard. What remains:
+
+- The person in front of you who exchanges under their own key is
+  accepted: meeting them is the authentication, as in every in-person
+  mode. A failed session has shown your card on screen to that person,
+  no more than a successful one would.
+- `FAI3` carries no tag. Forging one, under the peer's session id read
+  off its screen, fails an exchange that has not finalized; it needs a
+  screen in the gap between the two phones.
+- A restored contact adopts the new key only on the peer's verified
+  done, read in `DON4` or `BTH4`. A phone that leaves the exchange before
+  it reads one keeps the contact waiting with its old key.
+- A lost last frame can leave one phone with a Pending contact the
+  other never saved, until reciprocity retires it (D).
+- Chunks are sealed with ChaCha20-Poly1305 and random 12-byte nonces
+  under a key used for one session only.
+
+Earlier builds took the identity key from a payload nothing signed and
+confirmed with an unkeyed hash, so a person who knew only a contact's
+public key could replace the card the user held for that contact
+(vauchi/private#1217).
+
+### Vectors
+
+None yet.
 
 ---
 

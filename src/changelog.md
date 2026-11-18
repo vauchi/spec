@@ -24,6 +24,16 @@ Each spec tag maps to the Core commit it was extracted from.
   (vauchi/private#1247). The A security note now separates the identity
   backup, which still keeps the device index, from the full backup.
 
+- In-Person Exchange gains section E, the multi-stage animated QR of
+  Hover and TapHoverShake: a payload signed by the sender's identity
+  over its session, a confirm keyed from the transport key only after
+  the checks, a done only after the save, a keyed both, and a
+  restored contact's rekey only on the peer's verified done. The note that these modes do not yet
+  authenticate the peer's identity is gone, B12 points to E8, S17's
+  third sentence holds through them, and S18 states the claim
+  (vauchi/private#1217). The mode list says the app offers only
+  Glance, Hover and Link, so TapHoverShake is deferred.
+
 - In-Person Exchange says the multi-stage modes do not yet authenticate
   the identity key their payload carries, and B12 names the one
   exception A8 and Social Recovery C5 already state (a contact restored
