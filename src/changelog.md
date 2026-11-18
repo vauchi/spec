@@ -7,6 +7,14 @@ Each spec tag maps to the Core commit it was extracted from.
 
 ## Unreleased
 
+- Keys and Cards D1: an identity backup restore registers the install
+  as a new device, as a full backup restore does (D4): a random index in
+  the upper half of the range, a new signing key and a registry version
+  of at least the restore time, naming only the new device. Before, it
+  kept the backed-up device index with a fresh key, so contacts that
+  pinned that device refused it (vauchi/private#970). The A security
+  note no longer says two restored installs share one device index.
+
 - S18 is shipped: Core's `multistage_exchange.spthy` annotates
   `card_authentic`, `peer_accepted_before_save` and `peer_saved_is_true`
   with `@claim: S18` (vauchi/private#1217). The overview counts S1 to S18.

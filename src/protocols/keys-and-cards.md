@@ -150,10 +150,10 @@ input's meaning bumps the version in the string.
   and future, on every device index; A3 means a linked device is a
   full copy, not a sub-identity (see E and [S15](../claims.md)).
   Per-device subkeys that would contain a leak are tracked work.
-- Two installs restored from one identity backup (D1) are
-  indistinguishable to the protocol and both start at the backup's
-  device index (`Identity::import_backup`'s note). A full backup (D4)
-  restores with a new random device index instead.
+- A restore from an identity backup (D1) or a full backup (D4) joins
+  the identity as a new device with a random device index, so two
+  installs restored from one backup are two devices to the protocol,
+  each with its own signing key.
 
 ---
 
@@ -276,8 +276,17 @@ Import accepts version `0x02` only and parses the plaintext with
 declared lengths that must fit (`a_plaintext_whose_lengths_overrun_it_is_refused`).
 Bytes after the device name are not refused: `parse_backup_plaintext`
 never checks that it reached the end, a defect, vauchi/private#949.
-The restored device keeps the backup's device index. A social-recovery
-restore takes a new one instead (Social Recovery A11, planned).
+The app's restore (`import_backup`) does not keep the backup's device
+index: it registers the install as a new device as a full backup
+restore does (D4), with a random index in the upper half of the `u32`
+range, a new signing key and a registry version of at least the restore
+time. An identity backup carries no registry, so the new device is the
+only one listed (`restored_identity_backup_device_tests.rs`,
+vauchi/private#970). The restore brings back no contact and no session:
+a contact met before keeps the keys of the first exchange (In-Person
+Exchange B12), so the restored install cannot resume it by meeting it
+again (vauchi/private#1285). A social-recovery restore takes a new index too
+(Social Recovery A11, planned).
 
 **D2. Full backup, v3** (legacy, still imported). `0x03 || salt(16) ||
 Enc(K3, zlib(JSON))` with
