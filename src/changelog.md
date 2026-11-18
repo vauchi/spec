@@ -7,6 +7,10 @@ Each spec tag maps to the Core commit it was extracted from.
 
 ## Unreleased
 
+- S18 is shipped: Core's `multistage_exchange.spthy` annotates
+  `card_authentic`, `peer_accepted_before_save` and `peer_saved_is_true`
+  with `@claim: S18` (vauchi/private#1217). The overview counts S1 to S18.
+
 - Card Update and Sync C5 describes Core v0.106.1's bounded wrapper for
   oversized registry controls, missing-registry bootstrap and one
   stateless ACK to the requesting device. Small envelopes and signature

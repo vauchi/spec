@@ -19,7 +19,7 @@ make those statements true, as the code implements them today.
   [vauchi/relay](https://gitlab.com/vauchi/relay) do on `main`, with
   the source file named. Where the code and the intended design
   differ, the chapter says what the code does and names the issue.
-- **Falsifiable.** The [claims](claims.md) are numbered S1 to S17.
+- **Falsifiable.** The [claims](claims.md) are numbered S1 to S18.
   Each states its attacker, the exact statement, what it would mean if
   it were false, and the test, lemma or lane that backs it. That
   chapter is the invitation: it says where to swing.

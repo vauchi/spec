@@ -169,7 +169,7 @@ Extracted on 2026-10-28 from the security-claims page of vauchi.app/docs, itself
 - **Attacker**: Someone who controls what the cameras read, films both screens and knows the public keys of the user's contacts.
 - **Statement**: Through Hover or TapHoverShake a phone saves a contact only under an identity whose holder signed that session's payload, only after the peer, in that session, accepted it, and believes the peer saved only when it did.
 - **If false**: A person who knows a contact's public key replaces the card the user holds for that contact, or one phone saves a contact the other refused.
-- **Status**: planned
+- **Status**: shipped
 - **Backed by**: Tamarin `multistage_exchange.spthy`, lemmas `card_authentic`, `peer_accepted_before_save` and `peer_saved_is_true`, each falsified by its control (`-DNO_PAYLOAD_SIG`, `-DLEGACY_TAG`, `-DCONFIRM_BEFORE_VERIFY`, `-DNO_LABEL`) and kept under `-DREBIND` and `-DACCEPT_IN3D`; tests in `multistage_identity_binding_tests.rs`, `multistage_payload_tests.rs`, `multistage_final_frame_tests.rs` and `multistage_restored_rekey_tests.rs`. The unkeyed end-of-display frames and a lost last frame are outside the statement (In-Person Exchange E, security considerations).
 - **Section**: [in-person-exchange](protocols/in-person-exchange.md)
 
