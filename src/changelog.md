@@ -7,6 +7,11 @@ Each spec tag maps to the Core commit it was extracted from.
 
 ## Unreleased
 
+- Claims S2 and S9: three `Backed by` sentences named a test without
+  its file, or beside another test's file; each now names the file the
+  test is in. `check:claim-names` requires that from now on: a name in a
+  clause that names files must be in one of them (vauchi/private#950).
+
 - Keys and Cards D1: an identity backup restore registers the install
   as a new device, as a full backup restore does (D4): a random index in
   the upper half of the range, a new signing key and a registry version
