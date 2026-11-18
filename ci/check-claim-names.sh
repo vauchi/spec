@@ -18,6 +18,12 @@
 # identifiers and are left alone. A candidate passes when it occurs as a
 # whole word in any file under the search roots.
 #
+# A `Backed by` line also says where: in a clause (the text between two
+# `; ` or `. `) that names `.rs` or `.spthy` files, every candidate must
+# occur in a file of one of those names. A name found elsewhere is
+# MISPLACED; that is how a claim pointed at the wrong file and passed
+# (vauchi/private#950). A clause naming no file is checked as before.
+#
 # A name that lives in an open merge request is listed in
 # `claim-names.pending` (next to this script, or $CLAIM_NAMES_PENDING):
 # missing then means PENDING, not FAIL, and the check fails once the name
@@ -37,6 +43,46 @@ candidates() {
     # Commit hashes in backticks are all hex; they are references, not names.
     grep -oE '`[a-z][a-z0-9_]*`' "$1" | tr -d '`' | awk 'length($0) > 8' |
         grep -vE '^[0-9a-f]+$' | sort -u
+}
+
+# Prints "name<TAB>file,file" for every candidate in a `Backed by` clause
+# that names files.
+placed_candidates() {
+    awk '
+        /^- \*\*Backed by\*\*:/ {
+            n = split($0, clauses, /; |\. /)
+            for (c = 1; c <= n; c++) {
+                text = clauses[c]; files = ""; names = ""
+                while (match(text, /`[^`]+`/)) {
+                    tok = substr(text, RSTART + 1, RLENGTH - 2)
+                    text = substr(text, RSTART + RLENGTH)
+                    if (tok ~ /^[A-Za-z0-9_\/.-]+\.(rs|spthy)$/) {
+                        sub(/^.*\//, "", tok)
+                        files = files (files == "" ? "" : ",") tok
+                    } else if (tok ~ /^[a-z][a-z0-9_]*$/ && length(tok) > 8 && tok !~ /^[0-9a-f]+$/) {
+                        names = names (names == "" ? "" : " ") tok
+                    }
+                }
+                if (files != "" && names != "") {
+                    m = split(names, each, " ")
+                    for (i = 1; i <= m; i++) print each[i] "\t" files
+                }
+            }
+        }
+    ' "$1" | sort -u
+}
+
+# Whether $1 occurs as a whole word in a file named one of $2 (comma list)
+# under the remaining arguments.
+in_a_named_file() {
+    name=$1
+    files=$2
+    shift 2
+    for base in $(echo "$files" | tr ',' ' '); do
+        find "$@" -type f -name "$base" -exec grep -lw -- "$name" {} + |
+            grep -q . && return 0
+    done
+    return 1
 }
 
 pending_names() {
@@ -76,8 +122,18 @@ check() {
             missing=$((missing + 1))
         fi
     done
+    placed_candidates "$claims" > "${TMPDIR:-/tmp}/claim-places.$$"
+    while IFS="$(printf '\t')" read -r name files; do
+        is_pending "$name" && continue
+        grep -rqw -- "$name" "$@" || continue
+        if ! in_a_named_file "$name" "$files" "$@"; then
+            echo "MISPLACED: $name is named with $files in $claims and is in none of them" >&2
+            missing=$((missing + 1))
+        fi
+    done < "${TMPDIR:-/tmp}/claim-places.$$"
+    rm -f "${TMPDIR:-/tmp}/claim-places.$$"
     if [ "$missing" -gt 0 ]; then
-        echo "FAIL: $missing of $checked names in $claims back nothing" >&2
+        echo "FAIL: $missing of $checked names in $claims back nothing or sit in another file" >&2
         return 1
     fi
     echo "OK: all $checked test, lemma and invariant names in $claims exist or are pending"
@@ -118,7 +174,27 @@ self_test() {
         echo "SELF-TEST FAILED: a pending name present in a merge request's own sources must pass" >&2
         exit 1
     }
-    echo "self-test OK: missing fails, present and non-identifiers pass, pending waits, stale pending fails, a landing name passes"
+    printf 'fn another_real_test() {}\n' > "$tmp/root/tests/y.rs"
+    printf -- '- **Backed by**: test `a_real_test_name` in `y.rs`; lemma `a_real_lemma_name` in `x.rs`\n' > "$tmp/misplaced.md"
+    printf -- '- **Backed by**: tests `a_real_test_name` in `x.rs` and `another_real_test` in `tests/y.rs`; then `a_real_lemma_name`\n' > "$tmp/placed.md"
+    if CLAIM_NAMES_PENDING="$tmp/empty.pending" check "$tmp/misplaced.md" "$tmp/root" 2>"$tmp/err"; then
+        echo "SELF-TEST FAILED: a name in another file than the one named was not reported" >&2
+        exit 1
+    fi
+    grep -q 'MISPLACED: a_real_test_name is named with y.rs' "$tmp/err" || {
+        echo "SELF-TEST FAILED: the misplaced name was not named:" >&2
+        cat "$tmp/err" >&2
+        exit 1
+    }
+    if grep -q 'a_real_lemma_name' "$tmp/err"; then
+        echo "SELF-TEST FAILED: a name in the file it is named with was reported" >&2
+        exit 1
+    fi
+    CLAIM_NAMES_PENDING="$tmp/empty.pending" check "$tmp/placed.md" "$tmp/root" >/dev/null || {
+        echo "SELF-TEST FAILED: names in the files they are named with must pass" >&2
+        exit 1
+    }
+    echo "self-test OK: missing fails, present and non-identifiers pass, pending waits, stale pending fails, a landing name passes, a name in another file than the one named fails"
 }
 
 [ "$#" -ge 1 ] || usage
