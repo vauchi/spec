@@ -126,6 +126,17 @@ check() {
     PENDING=$(pending_names "${CLAIM_NAMES_PENDING:-$(dirname "$0")/claim-names.pending}")
     missing=0
     checked=0
+    # A root that is gone holds no name, and the others still do: the
+    # callers list crates by name, and Core has dropped one before.
+    for root in "$@"; do
+        shift
+        if [ -e "$root" ]; then
+            set -- "$@" "$root"
+        else
+            echo "WARN: no such search root: $root" >&2
+        fi
+    done
+    [ "$#" -ge 1 ] || { echo "ERROR: none of the search roots exists" >&2; exit 2; }
     WORK=$(mktemp -d)
     candidates "$claims" > "$WORK/names"
     find "$@" -type f > "$WORK/files"
@@ -185,6 +196,20 @@ self_test() {
         exit 1
     }
     CLAIM_NAMES_PENDING="$tmp/empty.pending" check "$tmp/good.md" "$tmp/root" >/dev/null
+
+    CLAIM_NAMES_PENDING="$tmp/empty.pending" check "$tmp/good.md" "$tmp/gone" "$tmp/root" >/dev/null 2>"$tmp/err" || {
+        echo "SELF-TEST FAILED: a search root that is gone must not hide the names in the others:" >&2
+        cat "$tmp/err" >&2
+        exit 1
+    }
+    grep -q "WARN: no such search root: $tmp/gone" "$tmp/err" || {
+        echo "SELF-TEST FAILED: a search root that is gone was not named" >&2
+        exit 1
+    }
+    if (CLAIM_NAMES_PENDING="$tmp/empty.pending" check "$tmp/good.md" "$tmp/gone") >/dev/null 2>&1; then
+        echo "SELF-TEST FAILED: a check with no search root left must not pass" >&2
+        exit 1
+    fi
 
     printf 'a_real_test_name_prefix core!0 (self-test)\n' > "$tmp/one.pending"
     CLAIM_NAMES_PENDING="$tmp/one.pending" check "$tmp/bad.md" "$tmp/root" >/dev/null || {
