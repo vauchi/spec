@@ -7,6 +7,16 @@ Each spec tag maps to the Core commit it was extracted from.
 
 ## Unreleased
 
+- In-Person Exchange E1, E7, E8, E9 and the failure table: the confirm,
+  done and both frames are `CNF5`, `DON5` and `BTH5`, and their tag's
+  label states whether the sender already holds the receiver as a
+  contact and how the exchange ended. When one phone holds the other and
+  the other no longer holds it, the holder asks its person, for at most
+  120 seconds; only a yes gives the contact the new exchange's key, and
+  the other phone saves only then. Two phones that still hold each
+  other keep their key as before. `CNF4`, `DON4` and `BTH4` are retired
+  prefixes. Hover only; Glance keeps B12 (vauchi/private#1285, core
+  `e92ea84dd`).
 - Claims S1 and S2 name the controls of the card-update model. S1's
   `changes_stay_secret` is falsified by `-DPLAINTEXT_UPDATES`; S1 said
   it had no control. S2's

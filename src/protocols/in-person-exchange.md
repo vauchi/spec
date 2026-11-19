@@ -522,7 +522,10 @@ vauchi/private#941), except a contact restored from a guardian backup
 and waiting for its rekey, which takes the exchange's (A8, Social
 Recovery C5); through the multi-stage modes it takes it only once the
 peer said it saved (E8). This holds for every in-person completion
-path, QR and multi-stage included.
+path, QR and multi-stage included, with one more exception: through
+Hover, when this phone holds the peer and the peer says it no longer
+holds this phone, the phone's person is asked, and a yes gives the
+contact the new exchange's key (E8, vauchi/private#1285).
 
 **B13. Reciprocity over the link.** After its contact is durably
 saved, the initiator sends an ack: `0x01 || AEAD(SK, our_token; AAD =
@@ -888,10 +891,13 @@ Alice                                                     Bob
   |   of Bob's chunks                                 DAT4 for Bob
   | 4 RVL4(sid_A, rk_A)        Alice holds C_B, Bob acked all of C_A
   | 5 open C_B with rk_B; check ch_B and P_B (E3, E6)
-  | 6 CNF4(sid_A, rk_A, tag_CNF)        only after every check passed
-  | 7 Bob's CNF4 verifies: Finalized; the app saves Bob
-  | 8 DON4(sid_A, rk_A, tag_DON)        only after the save succeeded
-  | 9 saved and Bob's DON4 read: BTH4(sid_A, rk_A, tag_DON) for 3 s
+  | 6 CNF5(sid_A, rk_A, tag_CNF)        only after every check passed;
+  |   the tag also says whether Alice already holds Bob (E7)
+  | 7 Bob's CNF5 verifies: Finalized; the app saves Bob, or asks
+  |   Alice first when she holds Bob and Bob no longer holds her (E8)
+  | 8 DON5(sid_A, rk_A, tag_DON)        only after the exchange ended
+  |   on Alice's phone; the tag says how (E7)
+  | 9 ended and Bob's DON5 read: BTH5(sid_A, rk_A, tag_DON) for 3 s
   | 10 reciprocity confirmation (D3)
 ```
 
@@ -911,11 +917,11 @@ Source: `vauchi-core/src/exchange/multistage/` (`session.rs`,
 the eight-character training header of the link trainer, which carries
 the layout and read counts and no secret, and a base45 body, drawn in
 QR alphanumeric mode at error correction L. The prefixes are `INI3`
-(opening), `DAT4` (data), `RVL4` (reveal), `CNF4` (confirm), `DON4`
-(done), `BTH4` (both), `FAI3` (fail) and `SHK3` (shake envelope). A
+(opening), `DAT4` (data), `RVL4` (reveal), `CNF5` (confirm), `DON5`
+(done), `BTH5` (both), `FAI3` (fail) and `SHK3` (shake envelope). A
 frame under a retired prefix (`INI2`, `IN2D`, `DATA`, `VRFY`, `CONF`,
 `RDYY`, `FAIL`, `SHAK`, `CMBO`, `DAT3`, `IN3D`, `FIN3`, `DON3`,
-`BTH3`) changes
+`BTH3`, `CNF4`, `DON4`, `BTH4`) changes
 nothing and is reported as coming from an older version: builds on
 either side of a prefix change cannot complete this exchange. A phone
 ignores a frame that carries its own session id, its reflection in the
@@ -989,22 +995,45 @@ peer's payload is open).
 **E7. Confirm and done** (`confirmation.rs`).
 
 ```text
-K   = HKDF-SHA256(salt none, T, "vauchi-multistage-confirm-v3")
+K   = HKDF-SHA256(salt none, T, "vauchi-multistage-confirm-v4")
 tag = HMAC-SHA256(K, label || sid_s || sid_r || eph_s || eph_r
                   || ch_s || ch_r || SHA-256(P_s) || SHA-256(P_r))
 ```
 
-`label` is `"CNF"` in a confirm and `"DON"` in a done; `s` is the
-sender, `r` the receiver. `CNF4` and `DON4` are the session id, the
-reveal key and the tag: 132 characters with the header, QR version 5,
-the size of the opening frame. A phone that has passed its checks and
-reads its peer's `CNF4`, or a `DON4`, whose tag verifies is
-Finalized. A tag that does not verify is ignored, as a misread is, and
-the peer's next frame decides; a peer that re-handshakes (E11) shows
-frames bound to its old partner until it does. A confirm or done read
-before the phone's own checks finished is kept with its label and
-checked when they finish. A confirm or done from another session id is
-ignored.
+`s` is the sender, `r` the receiver. `label` is eight bytes and is the
+sender's statement about its own contact list (vauchi/private#1285):
+
+| Frame | Label | The sender says |
+|---|---|---|
+| confirm | `CNF-HELD` | I accepted your payload, and I already hold you as a contact |
+| confirm | `CNF-NONE` | I accepted your payload, and I do not hold you |
+| done | `DON-SV-H` | I held you; I took your new card and kept my key |
+| done | `DON-SV-N` | I did not hold you; I saved you under this exchange's key |
+| done | `DON-RECO` | I held you, my person agreed, and your contact now has this exchange's key |
+| done | `DON-KP-H` | I hold you and nothing changed: my person declined or did not answer |
+| done | `DON-KP-N` | I do not hold you and I saved nothing |
+
+A phone holds its peer when it has an exchanged contact with a shared
+key for the identity the payload verified for, and that contact is not
+a restored one waiting for its rekey (`holds_exchanged_contact`). A
+session shows no confirm before the app has said which it is
+(`state_holding`); a session without an identity says it holds nothing.
+
+`CNF5`, `DON5` and `BTH5` are the session id, the reveal key and the
+tag: 132 characters with the header, QR version 5, the size of the
+opening frame. The frame does not carry the label. The reader computes
+the tag under each label its kind of frame allows, two for a confirm
+and five for a done or a both, and compares in constant time
+(`confirmation::read`), so a confirm cannot be read as a done, and a
+camera that is not the session's peer cannot tell from a frame whether
+the sender holds the reader. A phone that has passed its checks and
+reads its peer's `CNF5`, or a `DON5`, whose tag verifies under one of
+those labels is Finalized. A tag that verifies under none is ignored,
+as a misread is, and the peer's next frame decides; a peer that
+re-handshakes (E11) shows frames bound to its old partner until it
+does. A confirm or done read before the phone's own checks finished,
+or before the app has stated what it holds, is kept with its kind and
+checked then. A confirm or done from another session id is ignored.
 
 **E8. Saving.** On Finalized the app saves the identity and card the
 payload verified for (`received_peer`) as an exchanged contact with
@@ -1013,23 +1042,58 @@ reciprocity Pending, which relay sync resolves (D3). The contact, its
 ratchet and a restored contact's new key are written in one storage
 transaction, so a failed write leaves none of them behind. Only after the
 save succeeded does it tell the session (`mark_saved`), which then
-shows `DON4` in place of `CNF4`. A failed save fails the exchange
-(`save_failed`): no done is shown, and the phone shows `FAI3` (E9). A repeat exchange keeps the
-first exchange's keys (B12). A contact restored from a guardian backup
+shows `DON5` in place of `CNF5`. A failed save fails the exchange
+(`save_failed`): no done is shown, and the phone shows `FAI3` (E9). A
+contact restored from a guardian backup
 and waiting for its rekey (Social Recovery C5) takes `T` only once
-the peer's verified done tag has been read, in `DON4` or `BTH4`
+the peer's verified done tag has been read, in `DON5` or `BTH5`
 (`save_exchanged_contact_before_peer_saved`, then
 `save_exchanged_contact`); until then it gets the new card, keeps its
 old key and goes on waiting.
 
-**E9. Ending.** A `DON4` whose done tag verifies tells a phone its peer
-saved. A phone that saved and read its peer's done shows `BTH4`, the
-done frame's layout and tag under its own prefix, for 3 seconds; a
-saved phone that reads its peer's `BTH4` and verifies its tag stops at
-once and knows its peer saved, though it may never have read a `DON4`.
-A phone that has not saved neither shows nor obeys `BTH4`, and a
-`BTH4` whose tag does not verify is ignored. Without either, a finalized phone keeps showing its frame
-for 60 seconds.
+What a repeat exchange does follows from the two statements of E7
+(`multi_stage_reconnect.rs`):
+
+| This phone | Its peer | This phone |
+|---|---|---|
+| holds nothing | holds nothing | saves the peer under `T` (a first meeting) |
+| holds the peer | holds this phone | takes the new card and keeps the first exchange's key and ratchet (B12); nobody is asked |
+| holds the peer | holds nothing | asks its person, for at most 120 seconds (`RECONNECT_DEADLINE_MS`), and keeps showing its confirm meanwhile |
+| holds nothing | holds this phone | saves nothing and waits for the peer's done |
+
+The phone that asks names the contact and says that the other phone no
+longer has this person. On a yes it gives the contact `T` and a new
+ratchet, keeps the contact's notes, groups and settings, replaces what
+it knew of the contact's devices (vauchi/private#1247) and shows `DON-RECO`
+(`reconnect_exchanged_contact`, `mark_reconnected`; the session refuses
+`mark_reconnected` unless the phone said it holds the peer and the peer
+said it holds nothing). On a no, or with no answer in time, it takes
+the new card, keeps its key and shows `DON-KP-H`
+(`refresh_exchanged_card`, `mark_kept`). A contact the phone has
+blocked is not asked about: the save refuses it and the exchange fails
+there, as any exchange with a blocked contact does. The waiting phone
+saves the peer under `T` only on a verified `DON-RECO`; on any other
+done from the holder, or when its own wait ends, it saves nothing and
+shows `DON-KP-N`. A contact's key therefore changes in a repeat
+exchange only on the phone whose person said yes, to the key of an
+exchange with a peer whose payload verified for that contact's
+identity. This rule runs through Hover; Glance keeps B12 until its
+handshake carries the statements (vauchi/private#728).
+
+**E9. Ending.** A `DON5` whose tag verifies tells a phone how the
+exchange ended on its peer: under `DON-SV-H`, `DON-SV-N` or `DON-RECO`
+the peer holds this phone as a contact; under `DON-KP-H` or `DON-KP-N`
+the peer's contacts are as they were. A phone that ended, saved or
+kept, and read its peer's done shows `BTH5`, the
+done frame's layout and its own done tag under its own prefix, for 3
+seconds; an ended phone that reads its peer's `BTH5` and verifies its
+tag stops at once and knows how its peer ended, though it may never
+have read a `DON5`. A phone that has not ended neither shows nor obeys
+`BTH5`, and a `BTH5` whose tag does not verify is ignored. Without
+either, a finalized phone keeps showing its frame for 60 seconds; while
+it asks its person, or waits for a peer that is asking, the limit is
+150 seconds (`DECISION_CEILING`), and its ending starts the 60 seconds
+again.
 
 A phone whose check of the peer's payload failed (E3), or whose save
 failed (E8), shows `FAI3`, its own session id, for 3 seconds
@@ -1076,6 +1140,8 @@ is over.
 | Frame under a retired prefix | ignored, "older version" shown |
 | Save fails | `Failed`, no done, `FAI3` shown |
 | Last frame lost | one phone saved, the other did not; the saved contact stays Pending (D) |
+| One phone holds the other, and its person declines or does not answer in 120 seconds | no key changes: the holder takes the new card, the other saves nothing; both show an ending, not a failure |
+| The holder's done is never read by the waiting phone | the waiting phone saves nothing when its wait ends; a holder that said yes then holds a key its peer does not, until they exchange again |
 
 ### Security considerations
 
@@ -1106,8 +1172,19 @@ both screens at once is hard. What remains:
 - `FAI3` carries no tag. Forging one, under the peer's session id read
   off its screen, fails an exchange that has not finalized; it needs a
   screen in the gap between the two phones.
+- **The statements of E7** are made by the session's peer and by nobody
+  else: the tag needs `T`. A peer can lie in one. Saying it holds
+  nothing when it holds this phone makes this phone ask its person; a
+  yes gives the contact the key of this exchange, which that same
+  verified identity shares, as a first meeting would. Saying it holds
+  this phone when it does not makes this phone wait and save nothing.
+  Neither changes a key without the person's yes, and the question is
+  asked only in person: the peer's payload verified, and the two phones
+  read each other's frames. What the question cannot tell is whether the
+  person holding the other phone is the contact; the text asks the user
+  to say yes only if that person is with them.
 - A restored contact adopts the new key only on the peer's verified
-  done, read in `DON4` or `BTH4`. A phone that leaves the exchange before
+  done, read in `DON5` or `BTH5`. A phone that leaves the exchange before
   it reads one keeps the contact waiting with its old key.
 - A lost last frame can leave one phone with a Pending contact the
   other never saved, until reciprocity retires it (D).
