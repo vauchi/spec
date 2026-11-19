@@ -72,15 +72,35 @@ placed_candidates() {
     ' "$1" | sort -u
 }
 
+# Every candidate listed in $1 that occurs as a whole word under the
+# roots, one per line. The roots are read once for all candidates: one
+# recursive grep per name took four minutes for the seven chapters
+# against Core (vauchi/private#1305). A whole word is a maximal run of
+# letters, digits and underscores, which is what grep -w matches for
+# these names.
+present_names() {
+    wanted=$1
+    shift
+    [ -s "$wanted" ] || return 0
+    find "$@" -type f -exec cat {} + | LC_ALL=C tr -cs 'A-Za-z0-9_' '\n' |
+        awk 'NR == FNR { want[$0]; next } ($0 in want) && !seen[$0]++' "$wanted" -
+}
+
+is_present() {
+    grep -qxF -- "$1" "$WORK/present"
+}
+
 # Whether $1 occurs as a whole word in a file named one of $2 (comma list)
-# under the remaining arguments.
+# among the files listed in $WORK/files.
 in_a_named_file() {
     name=$1
-    files=$2
-    shift 2
-    for base in $(echo "$files" | tr ',' ' '); do
-        find "$@" -type f -name "$base" -exec grep -lw -- "$name" {} + |
-            grep -q . && return 0
+    for base in $(echo "$2" | tr ',' ' '); do
+        while IFS= read -r path; do
+            [ -n "$path" ] || continue
+            grep -qw -- "$name" "$path" && return 0
+        done << EOF
+$(awk -F/ -v base="$base" '$NF == base' "$WORK/files")
+EOF
     done
     return 1
 }
@@ -106,9 +126,13 @@ check() {
     PENDING=$(pending_names "${CLAIM_NAMES_PENDING:-$(dirname "$0")/claim-names.pending}")
     missing=0
     checked=0
-    for name in $(candidates "$claims"); do
+    WORK=$(mktemp -d)
+    candidates "$claims" > "$WORK/names"
+    find "$@" -type f > "$WORK/files"
+    present_names "$WORK/names" "$@" > "$WORK/present"
+    for name in $(cat "$WORK/names"); do
         checked=$((checked + 1))
-        if grep -rqw -- "$name" "$@"; then
+        if is_present "$name"; then
             if is_pending "$name" && [ "${CLAIM_NAMES_SOURCES_MAY_LAND:-0}" = 1 ]; then
                 echo "LANDING: $name is in these sources; remove it from claim-names.pending once they merge"
             elif is_pending "$name"; then
@@ -122,16 +146,16 @@ check() {
             missing=$((missing + 1))
         fi
     done
-    placed_candidates "$claims" > "${TMPDIR:-/tmp}/claim-places.$$"
+    placed_candidates "$claims" > "$WORK/places"
     while IFS="$(printf '\t')" read -r name files; do
         is_pending "$name" && continue
-        grep -rqw -- "$name" "$@" || continue
-        if ! in_a_named_file "$name" "$files" "$@"; then
+        is_present "$name" || continue
+        if ! in_a_named_file "$name" "$files"; then
             echo "MISPLACED: $name is named with $files in $claims and is in none of them" >&2
             missing=$((missing + 1))
         fi
-    done < "${TMPDIR:-/tmp}/claim-places.$$"
-    rm -f "${TMPDIR:-/tmp}/claim-places.$$"
+    done < "$WORK/places"
+    rm -rf "$WORK"
     if [ "$missing" -gt 0 ]; then
         echo "FAIL: $missing of $checked names in $claims back nothing or sit in another file" >&2
         return 1
@@ -144,7 +168,9 @@ self_test() {
     tmp=$(mktemp -d)
     trap 'rm -rf "$tmp"' EXIT
     mkdir -p "$tmp/root/tests"
-    printf 'fn a_real_test_name() {}\nlemma a_real_lemma_name:\n' > "$tmp/root/tests/x.rs"
+    # The leading byte is no valid UTF-8: the roots hold binary fixtures,
+    # and a word split that stops at one finds none of the names after it.
+    printf '\377\nfn a_real_test_name() {}\nlemma a_real_lemma_name:\n' > "$tmp/root/tests/x.rs"
     printf -- '- **Backed by**: `a_real_test_name`, `a_real_lemma_name`, `a_real_test_name_prefix`\n' > "$tmp/bad.md"
     printf -- '- **Backed by**: `a_real_test_name` and `a_real_lemma_name`; file `foo_tests.rs`; lane `test:release-rg7`; flag `-DNO_SIGNATURE`; commit `a4e7c6eed`\n' > "$tmp/good.md"
     : > "$tmp/empty.pending"
