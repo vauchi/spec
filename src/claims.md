@@ -187,7 +187,7 @@ Extracted on 2026-10-28 from the security-claims page of vauchi.app/docs, itself
 
 Limits known today, so that a reviewer does not spend a week proving them:
 
-- The relay sees metadata: which mailbox tokens receive how much, and when. Sealed sender and padding reduce it; they do not remove it.
+- The relay sees metadata: which mailbox tokens receive how much, and when. Sealed sender and padding reduce it; they do not remove it. Mailbox cohorts, in which every member downloads its cohort's whole batch and every device writes a fixed number of same-sized records on a fixed schedule, are planned; they would hide who writes to whom within a cohort, not cohort membership or when a device is online.
 - The relay can correlate one fetcher's per-day requests by their timing on the immediate path; the delayed path spreads it. Until core!2060 (merged 2026-10-28) the requests also overlapped in yesterday's tokens across days, which made the fetcher a stable pseudonym (S4).
 - Three relay routes are addressed by an identity key or its hash: guardian sets, recovery proofs and purge. A recovery is visible metadata to the relay by design.
 - Token unlinkability is not forward secure: a mailbox token is a deterministic function of the channel's shared key, the recipient's key and the day, so whoever later obtains a contact's shared key can recompute every past token of that channel and link them in a retained log (S4).
