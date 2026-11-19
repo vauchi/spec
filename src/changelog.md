@@ -7,6 +7,15 @@ Each spec tag maps to the Core commit it was extracted from.
 
 ## Unreleased
 
+- Claims S1 and S2 name the controls of the card-update model. S1's
+  `changes_stay_secret` is falsified by `-DPLAINTEXT_UPDATES`; S1 said
+  it had no control. S2's
+  `update_comes_from_the_sender_for_this_recipient` is falsified by
+  `-DNO_RECIPIENT_BINDING`, and `each_update_is_applied_once` has a
+  witness in place of a control,
+  `a_leaked_sender_key_applies_one_update_twice`: the prover reaches no
+  verdict with the nonce check removed (vauchi/private#950).
+
 - Claim S11 names the test that backs healing after a compromise,
   `a_stolen_state_stops_opening_messages_after_the_device_uses_a_key_made_later`,
   and the window it shows: a stolen ratchet state still opens the
