@@ -7,6 +7,12 @@ Each spec tag maps to the Core commit it was extracted from.
 
 ## Unreleased
 
+- Claim S19: meeting again changes a contact's key only after its person
+  said yes, to the key of a session the contact's own identity opened;
+  the question follows the peer's own statement; the phone that lost the
+  contact saves only after that yes. Four lemmas in
+  `multistage_exchange.spthy`, each with a control that falsifies it
+  (vauchi/private#1285).
 - In-Person Exchange E1, E7, E8, E9 and the failure table: the confirm,
   done and both frames are `CNF5`, `DON5` and `BTH5`, and their tag's
   label states whether the sender already holds the receiver as a
