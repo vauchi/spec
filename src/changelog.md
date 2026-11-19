@@ -7,6 +7,10 @@ Each spec tag maps to the Core commit it was extracted from.
 
 ## Unreleased
 
+- Link Exchange A10: a repeat link exchange tells the phone that already
+  holds the contact that nothing changed, and cannot reconnect two
+  people when one phone lost the other (vauchi/private#1285, core
+  `14d548a34`).
 - Claim S19: meeting again changes a contact's key only after its person
   said yes, to the key of a session the contact's own identity opened;
   the question follows the peer's own statement; the phone that lost the

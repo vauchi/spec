@@ -248,7 +248,16 @@ a payload shorter than its signature.
 MUST verify the payload for the binding of the exchange it took part
 in (A9), and MUST reject a payload whose identity key is its own
 (`SelfExchange`). If a contact with that identity already exists the
-exchange is idempotent: the existing contact and its ratchet are kept.
+exchange is idempotent: the existing contact and its ratchet are kept,
+its card is not replaced, and both of that phone's completion screens
+say that the contact was already held and nothing changed
+(`already_held`). A link exchange therefore cannot reconnect two people
+when one phone lost the other: the phone that lost the contact saves it
+under the new exchange's key, the phone that kept it does not take that
+key, and the first gets no signal of it
+(`a_repeat_link_exchange_tells_the_holder_and_leaves_what_it_holds`,
+vauchi/private#1285). Meeting in person does reconnect them
+(In-Person Exchange E8).
 Otherwise the contact limit is enforced, and the shared key is
 
 ```text
