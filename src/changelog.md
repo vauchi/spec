@@ -11,12 +11,11 @@ Each spec tag maps to the Core commit it was extracted from.
   holds the contact that nothing changed, and cannot reconnect two
   people when one phone lost the other (vauchi/private#1285, core
   `14d548a34`).
-- Claim S19, planned: meeting again changes a contact's key only after
-  its person said yes, to the key of a session the contact's own identity
-  opened; the question follows the peer's own statement; the phone that
-  lost the contact saves only after that yes. Four lemmas in
-  `multistage_exchange.spthy`, each with a control that falsifies it.
-  The claim stays planned until the lemmas are on Core's main
+- Claim S19: meeting again changes a contact's key only after its person
+  said yes, to the key of a session the contact's own identity opened;
+  the question follows the peer's own statement; the phone that lost the
+  contact saves only after that yes. Four lemmas in
+  `multistage_exchange.spthy`, each with a control that falsifies it
   (vauchi/private#1285, core!2389).
 - In-Person Exchange E1, E7, E8, E9 and the failure table: the confirm,
   done and both frames are `CNF5`, `DON5` and `BTH5`, and their tag's
