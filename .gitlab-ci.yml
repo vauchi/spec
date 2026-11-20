@@ -24,6 +24,7 @@ include:
       - '/ci-templates/mr-rules.yml'
       - '/ci-templates/reuse.yml'
       - '/ci-templates/shipped-in.yml'
+      - '/ci-templates/github-mirror.yml'
   - template: Security/Secret-Detection.gitlab-ci.yml
 
 variables:
@@ -327,3 +328,5 @@ pages:
       when: never
     - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
 
+github-mirror:
+  extends: .github-mirror
