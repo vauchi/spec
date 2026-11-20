@@ -1,6 +1,6 @@
 <!-- SPDX-FileCopyrightText: 2026 Mattia Egloff <mattia.egloff@pm.me> -->
 <!-- SPDX-License-Identifier: GPL-3.0-or-later -->
-<!-- description: How one 32-byte master seed derives every Vauchi key, moves to a new device, and makes data at rest unreadable once its keys are destroyed; and what cards hold. -->
+<!-- description: How one 32-byte master seed derives the identity's keys, moves to a new device, and makes data at rest unreadable once its keys are gone; and what cards hold. -->
 
 # Keys and Cards
 
