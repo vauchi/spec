@@ -178,7 +178,7 @@ Extracted on 2026-10-28 from the security-claims page of vauchi.app/docs, itself
 - **Attacker**: Someone who controls what the cameras read, films both screens and knows the public keys of the user's contacts.
 - **Statement**: Through Hover, a phone that already holds a contact and meets that identity again gives the contact a new key only after its own person agreed, and only the key of a session that contact's identity opened. It asks only when the peer itself stated that it no longer holds this phone. The phone that lost the contact saves it again only after that yes.
 - **If false**: A bystander makes a phone replace a working connection with a key the contact does not hold, or makes the question appear when the contact lost nothing.
-- **Status**: shipped
+- **Status**: planned
 - **Backed by**: Tamarin `multistage_exchange.spthy`, lemmas `a_key_changes_only_after_a_yes`, `a_rekey_is_with_the_contacts_own_session`, `the_question_follows_the_peers_own_statement` and `a_waiting_phone_saves_only_after_the_holders_yes`, each falsified by its control (`-DREKEY_WITHOUT_ASKING`, `-DNO_PAYLOAD_SIG`, `-DSTATEMENT_IN_CLEAR`, `-DDONE_LABELS_SHARED`) and kept under `-DREBIND`, with `a_reconnect_is_possible` showing the path exists; tests in `multistage_holding_statement_tests.rs` and `repeat_exchange_reconnect_tests.rs` (vauchi-core) and `multi_stage_reconnect_tests.rs` (vauchi-app). The model assumes that a person says yes only for the contact who is with them; it does not prove that about people. Whether a phone's own statement is true is outside the statement, as are Glance and Link, where a repeat exchange changes no key.
 - **Section**: [in-person-exchange](protocols/in-person-exchange.md)
 
