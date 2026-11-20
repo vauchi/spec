@@ -1,5 +1,6 @@
 <!-- SPDX-FileCopyrightText: 2026 Mattia Egloff <mattia.egloff@pm.me> -->
 <!-- SPDX-License-Identifier: GPL-3.0-or-later -->
+<!-- description: The Vauchi protocol specification, a 0.1 draft: the protocols behind in-person exchange, card updates through a relay that cannot read them, and recovery. -->
 
 # Vauchi Protocol Specification
 

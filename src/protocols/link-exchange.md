@@ -1,5 +1,6 @@
 <!-- SPDX-FileCopyrightText: 2026 Mattia Egloff <mattia.egloff@pm.me> -->
 <!-- SPDX-License-Identifier: GPL-3.0-or-later -->
+<!-- description: How two people who are apart exchange Vauchi cards by link or short code, using the relay only as a store it cannot read, and what each six-digit code is for. -->
 
 # Link and Relay-Mediated Exchange
 

@@ -1,5 +1,6 @@
 <!-- SPDX-FileCopyrightText: 2026 Mattia Egloff <mattia.egloff@pm.me> -->
 <!-- SPDX-License-Identifier: GPL-3.0-or-later -->
+<!-- description: The Vauchi relay: a store-and-forward service under rotating mailbox tokens, behind an OHTTP hop, so neither hop sees both a user's address and their content. -->
 
 # Relay
 

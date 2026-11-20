@@ -1,5 +1,6 @@
 <!-- SPDX-FileCopyrightText: 2026 Mattia Egloff <mattia.egloff@pm.me> -->
 <!-- SPDX-License-Identifier: GPL-3.0-or-later -->
+<!-- description: How two people in the same place exchange Vauchi cards and end with a shared key bound to both identities, over QR, NFC or Bluetooth, and what each step proves. -->
 
 # In-Person Exchange
 

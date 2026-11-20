@@ -1,5 +1,6 @@
 <!-- SPDX-FileCopyrightText: 2026 Mattia Egloff <mattia.egloff@pm.me> -->
 <!-- SPDX-License-Identifier: GPL-3.0-or-later -->
+<!-- description: Known-answer test vectors from the shipped vauchi-core functions, from identity derivation to backups and exchanges, to check an implementation against Core. -->
 
 # Test Vectors
 

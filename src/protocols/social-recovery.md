@@ -1,5 +1,6 @@
 <!-- SPDX-FileCopyrightText: 2026 Mattia Egloff <mattia.egloff@pm.me> -->
 <!-- SPDX-License-Identifier: GPL-3.0-or-later -->
+<!-- description: How Vauchi social recovery works: guardians chosen in advance hold sealed shares, a threshold restores the identity, and contacts can tell it from a thief. -->
 
 # Social Recovery
 

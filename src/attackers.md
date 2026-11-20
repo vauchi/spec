@@ -1,5 +1,6 @@
 <!-- SPDX-FileCopyrightText: 2026 Mattia Egloff <mattia.egloff@pm.me> -->
 <!-- SPDX-License-Identifier: GPL-3.0-or-later -->
+<!-- description: One table per attacker on Vauchi: what each holds, sees and can do, from the relay host to a device thief, and which security claims speak to each of them. -->
 
 # Attackers
 

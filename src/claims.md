@@ -1,5 +1,6 @@
 <!-- SPDX-FileCopyrightText: 2026 Mattia Egloff <mattia.egloff@pm.me> -->
 <!-- SPDX-License-Identifier: GPL-3.0-or-later -->
+<!-- description: The security claims a reviewer is invited to falsify: each names its attacker, what a user loses if it is false, its status and the test or lemma behind it. -->
 
 # Security Claims
 

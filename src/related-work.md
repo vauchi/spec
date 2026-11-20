@@ -1,5 +1,6 @@
 <!-- SPDX-FileCopyrightText: 2026 Mattia Egloff <mattia.egloff@pm.me> -->
 <!-- SPDX-License-Identifier: GPL-3.0-or-later -->
+<!-- description: Prior art for each part of Vauchi's design: the closest systems for contact cards, mailboxes and recovery, where Vauchi matches them, differs or is weaker. -->
 
 # Related Work
 

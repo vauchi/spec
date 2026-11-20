@@ -1,5 +1,6 @@
 <!-- SPDX-FileCopyrightText: 2026 Mattia Egloff <mattia.egloff@pm.me> -->
 <!-- SPDX-License-Identifier: GPL-3.0-or-later -->
+<!-- description: How to report a security vulnerability in Vauchi: the security@vauchi.app address, the PGP key and its fingerprint, security.txt, and how reports are handled. -->
 
 # Disclosure Policy
 

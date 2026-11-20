@@ -1,5 +1,6 @@
 <!-- SPDX-FileCopyrightText: 2026 Mattia Egloff <mattia.egloff@pm.me> -->
 <!-- SPDX-License-Identifier: GPL-3.0-or-later -->
+<!-- description: The JSON schemas of the Vauchi relay's /v2 requests and responses, generated from the Rust protocol types and checked in CI against Core and its examples. -->
 
 # Wire Schemas
 

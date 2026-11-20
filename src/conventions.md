@@ -1,5 +1,6 @@
 <!-- SPDX-FileCopyrightText: 2026 Mattia Egloff <mattia.egloff@pm.me> -->
 <!-- SPDX-License-Identifier: GPL-3.0-or-later -->
+<!-- description: How the Vauchi specification is written and read: chapters describe the code at a named commit, MUST requirements are binding, and claim numbers never change. -->
 
 # Conventions
 

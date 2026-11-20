@@ -1,5 +1,6 @@
 <!-- SPDX-FileCopyrightText: 2026 Mattia Egloff <mattia.egloff@pm.me> -->
 <!-- SPDX-License-Identifier: GPL-3.0-or-later -->
+<!-- description: How a card edit reaches exactly the contacts allowed to see each field, once and in order, how a person's devices stay in sync, and where forward secrecy ends. -->
 
 # Card Update and Sync
 

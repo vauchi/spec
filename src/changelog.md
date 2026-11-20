@@ -1,5 +1,6 @@
 <!-- SPDX-FileCopyrightText: 2026 Mattia Egloff <mattia.egloff@pm.me> -->
 <!-- SPDX-License-Identifier: GPL-3.0-or-later -->
+<!-- description: Changes to the Vauchi protocol specification, each spec tag mapped to the Core commit it was extracted from, with the claims and lemmas each change moved. -->
 
 # Changelog
 
