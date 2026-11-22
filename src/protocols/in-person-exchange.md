@@ -898,7 +898,8 @@ Alice                                                     Bob
   |   Alice first when she holds Bob and Bob no longer holds her (E8)
   | 8 DON5(sid_A, rk_A, tag_DON)        only after the exchange ended
   |   on Alice's phone; the tag says how (E7)
-  | 9 ended and Bob's DON5 read: BTH5(sid_A, rk_A, tag_DON) for 3 s
+  | 9 ended and Bob's DON5 read: BTH5(sid_A, rk_A, tag_DON) for 3 s,
+  |   10 s after a question (E9)
   | 10 reciprocity confirmation (D3)
 ```
 
@@ -1087,7 +1088,9 @@ the peer holds this phone as a contact; under `DON-KP-H` or `DON-KP-N`
 the peer's contacts are as they were. A phone that ended, saved or
 kept, and read its peer's done shows `BTH5`, the
 done frame's layout and its own done tag under its own prefix, for 3
-seconds; an ended phone that reads its peer's `BTH5` and verifies its
+seconds, or 10 seconds when one of the two phones asked its person
+whether to reconnect, because that phone starts its camera again on the
+answer; an ended phone that reads its peer's `BTH5` and verifies its
 tag stops at once and knows how its peer ended, though it may never
 have read a `DON5`. A phone that has not ended neither shows nor obeys
 `BTH5`, and a `BTH5` whose tag does not verify is ignored. Without

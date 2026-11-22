@@ -8,6 +8,11 @@ Each spec tag maps to the Core commit it was extracted from.
 
 ## Unreleased
 
+- In-Person Exchange E9 and step 9 of the sequence: after a question,
+  `BTH5` is shown for 10 seconds instead of 3, so the phone that
+  answered and started its camera again can still read it; a phone that
+  reads its peer's `BTH5` still stops at once (vauchi/private#1330,
+  core!2406).
 - Link Exchange A10: a repeat link exchange tells the phone that already
   holds the contact that nothing changed, and cannot reconnect two
   people when one phone lost the other (vauchi/private#1285, core
