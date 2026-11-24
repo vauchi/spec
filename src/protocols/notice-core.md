@@ -1,6 +1,6 @@
 <!-- SPDX-FileCopyrightText: 2026 Mattia Egloff <mattia.egloff@pm.me> -->
 <!-- SPDX-License-Identifier: GPL-3.0-or-later -->
-<!-- description: The proposed key delivery of mailbox cohorts: what two devices promise each other, and the derivations, records, stored state, sessions and slots that keep those promises. -->
+<!-- description: The proposed key delivery of mailbox cohorts: what two devices promise each other, and the derivations, records, state and sessions that keep those promises. -->
 
 # Notice Core (proposed)
 
