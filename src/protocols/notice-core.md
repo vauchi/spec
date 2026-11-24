@@ -614,10 +614,12 @@ commitments.
 
 - On reading an update-key notice: if its commitment is among the 32
   installed most recently, drop the notice. If its update key is
-  already pending, set the entry's time to now and keep its chunks: a
-  publication may outlast 21 days, and each view renews the entry.
-  Otherwise add a pending entry `(update key, commitment, time)`; at
-  most 32 a direction, the one with the oldest time dropped. Notices in
+  already pending with that commitment, set the entry's time to now and
+  keep its chunks: a publication may outlast 21 days, and each view
+  renews the entry. The same key with another commitment is a new
+  entry: an honest S never sends one key with two, and a copy's must not
+  keep the honest view out. Otherwise add a pending entry
+  `(update key, commitment, time)`; at most 32 a direction, the one with the oldest time dropped. Notices in
   one session take the order the batch gives, which the gateway
   chooses: it can make a 33rd key push out the latest one for a view's
   time, but only with 32 distinct keys S really wrote. A contact is in
@@ -811,7 +813,11 @@ from raising again an alarm already raised.
      number: a named epoch for 3P from its last naming, an unnamed one
      for 3P from its opening. At most 24 named and 12 unnamed, erased
      named longest ago first and lowest number first, never the two
-     kinds just said to be kept. R only moves upwards and seals every
+     kinds just said to be kept. These caps count only epochs below that
+     number: while R names nothing, every epoch S opened stays, so a
+     gateway that keeps R in place while S answers refresh after refresh
+     makes S hold one epoch for each (18 in one review's schedule); no
+     stall or disclosure follows. R only moves upwards and seals every
      refresh in its current epoch, so without a writing copy S always
      keeps an epoch R seals in, also after an older refresh delivered
      late made it write elsewhere. One exception to the first rule:
