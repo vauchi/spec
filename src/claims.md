@@ -183,11 +183,184 @@ Extracted on 2026-10-28 from the security-claims page of vauchi.app/docs, itself
 - **Backed by**: Tamarin `multistage_exchange.spthy`, lemmas `a_key_changes_only_after_a_yes`, `a_rekey_is_with_the_contacts_own_session`, `the_question_follows_the_peers_own_statement` and `a_waiting_phone_saves_only_after_the_holders_yes`, each falsified by its control (`-DREKEY_WITHOUT_ASKING`, `-DNO_PAYLOAD_SIG`, `-DSTATEMENT_IN_CLEAR`, `-DDONE_LABELS_SHARED`) and kept under `-DREBIND`, with `a_reconnect_is_possible` showing the path exists; tests in `multistage_holding_statement_tests.rs` and `repeat_exchange_reconnect_tests.rs` (vauchi-core) and `multi_stage_reconnect_tests.rs` (vauchi-app). The model assumes that a person says yes only for the contact who is with them; it does not prove that about people. Whether a phone's own statement is true is outside the statement, as are Glance and Link, where a repeat exchange changes no key.
 - **Section**: [in-person-exchange](protocols/in-person-exchange.md)
 
+## Notice core (proposed)
+
+These are reviewed claims about a proposed design, the
+[Notice Core](protocols/notice-core.md) of mailbox cohorts (ADR-081),
+not shipped properties: the design is implemented in Core behind the
+`notice-core` feature and wired to nothing, so no user has them today.
+They keep the labels of that chapter (P2, P3, P5, P6) and take no
+S-number until they ship. Each holds only within the windows and
+conditions it states. The attackers are those of the chapter's section
+B, also listed in [Attackers](attackers.md): G, the gateway without
+keys, and T, a copy of a device's state taken once. The design these
+claims describe is Core `3af62982a`, which passed the project's review;
+a human cryptographer reviews it before release. Core's conformance
+schedules ([Test Vectors](vectors.md#notice-core-proposed)) check that
+Core decides what an independent implementation of the protocol text
+decides; that is agreement with the text, not a proof of these claims.
+
+### P2. A later copy of a device reads no superseded update
+
+- **Attacker**: T: someone who copies the full state of the sender S or
+  the receiver R once, later, and reads what the relays still keep (120
+  days).
+- **Statement**: Each update has its own key, and outside the windows
+  below a later copy of either device reads no superseded update from
+  the relays.
+- **Windows**: S deletes an update key when a newer update supersedes
+  it, from its queues too. R deletes a notice's key once it has read
+  the notice; keeps an update key at most 21 days after the last notice
+  that carried it while it waits for the content (each view renews it);
+  keeps the key of a position it skipped for three refresh periods from
+  the skip; and keeps the means to read an epoch's notices for three
+  refresh periods after leaving it. These windows add up: an update key
+  read late from a skipped position, an epoch left, or a position of
+  the current epoch not read yet can then wait 21 days as pending, so a
+  later copy may hold a superseded key for both windows together; the
+  last case lasts while R stays in the epoch. A notice R has not yet
+  read in its current epoch stays readable to a later copy of R until R
+  moves on and three periods pass.
+- **Conditions**: every window runs on the device's clock and is closed
+  in the device's sessions. A clock set back lengthens it by up to the
+  set-back, and once corrected may end it up to that much early. A
+  device that runs no session keeps what it holds until its next one,
+  up to the relays' 120 days; a copy taken from storage while the app
+  has not run holds the keys whose windows ended since its last
+  session. The windows cover saved state and the protocol's live state,
+  not leftovers in freed memory: the HKDF and HMAC crates Core uses
+  (0.12) do not wipe their internal state, so a copy of the process's
+  memory may still hold key material this claim calls gone.
+- **If false**: Someone who copies a phone later opens card updates that
+  its contacts have since replaced.
+- **Status**: proposed; reviewed, not shipped.
+- **Section**: [notice-core](protocols/notice-core.md), B (P2), C (B1,
+  B2) and 4.
+
+### P3. A copy that only reads stops reading new updates
+
+- **Attacker**: T, a copy of S or of R that reads the cohort and writes
+  nothing.
+- **Statement**: The copy loses access to updates made afterwards once
+  R has made a refresh after the copy, S has opened it, R has named the
+  new epoch and S has followed that name.
+- **Windows**: up to about four refresh periods: up to about 23 days
+  with sessions every three days, and about 27 when R's clock runs
+  three days ahead at each refresh and is corrected after.
+- **Conditions**: both devices have sessions and S's slot budget is not
+  full. While R makes no refresh, nothing heals. A copy of S still
+  recognises the weekly publications of a body it already holds until
+  the group is next edited; it learns nothing from them except that no
+  edit happened. If an older refresh reaches S after a newer one, S
+  writes in the older epoch until the next refresh; within one session
+  S avoids that by order, so it takes the gateway, and a copy the
+  gateway helps is not defended.
+- **If false**: Someone who copied a phone once keeps reading its
+  contacts' new cards.
+- **Status**: proposed; reviewed, not shipped.
+- **Section**: [notice-core](protocols/notice-core.md), B (P3), C (R1,
+  R2, S4) and 7.
+
+### P5. The relays without keys cause no alarm and no lasting loss
+
+- **Attacker**: G, the outer relay and the application relay colluding,
+  holding no device keys: it drops, delays, reorders and replays
+  records, injects or alters bytes, and withholds acknowledgements.
+- **Statement**: Honest use and G alone raise no alarm, and cannot stop
+  R converging on S's latest card once G delivers again.
+- **Windows**: those of the chapter's P1: with nothing lost, within two
+  sessions of each device; after a lost notice, within one refresh
+  period plus two sessions of each device; after lost content, within
+  two refresh periods; after a lost notice and lost content together,
+  within about three. Where the notice or content budget is full,
+  records queue and the card arrives later.
+- **Conditions**: the devices' clocks stay within the chapter's bounds:
+  up to three days apart, sessions at least every three days, an
+  absence of at most 14 days. A device whose clock is wrong by more
+  than a week receives nothing new until it is right. A clock set back
+  by months, together with a gateway that kept honest records far
+  beyond the relays' 120 days, can raise one alarm with no key: the
+  sender has forgotten the refresh and the epoch it named.
+- **If false**: The relays alone, without any key, make a user see an
+  alarm about a contact, or keep an old card for good.
+- **Status**: proposed; reviewed, not shipped.
+- **Section**: [notice-core](protocols/notice-core.md), A, B (P1, P5)
+  and 6.
+
+### P6. Every device writes the same, so the relays learn no direction
+
+- **Attacker**: G, which watches every write and read, and delays,
+  drops and replays records.
+- **Statement**: G cannot tell a control record from an update notice
+  or a dummy, link a direction's records, or learn who writes to whom
+  within a cohort: every device writes exactly 80 notice slots of 96
+  bytes and 5 content slots of 576 bytes a background session, and 40
+  and 2 an open-app tick, whatever it has to send, with random bytes in
+  every unused slot and the slots in a random order, and every member
+  downloads every slot of its cohort.
+- **Conditions**: P6 is argued for a gateway that watches, delays,
+  drops and replays; it is not analysed against one that adapts its
+  tampering to what it observes. It does not hide which devices
+  registered in a cohort or when each wrote ([Relay](protocols/relay.md)
+  A11). In the alpha and beta every device is in the one cohort;
+  routing between cohorts is release work.
+- **If false**: The relays learn who keeps whose card, and when a
+  contact edits theirs.
+- **Status**: proposed; reviewed, not shipped.
+- **Section**: [notice-core](protocols/notice-core.md), A, B (P6) and
+  8.
+
+### Not claimed: a copy that writes
+
+Against a copy that writes records, the notice core promises best
+effort only (its P4): the alarms of the chapter's section D are raised
+when a device sees their condition, and there is no promise that such a
+copy is always alarmed or that its hold on the direction always ends.
+Known limits, each of which needs the copy to write:
+
+- A copy of S that writes every chain position first, and answers R's
+  refreshes itself, can hold the direction for as long as it writes;
+  after R alarms inside an epoch only the copy holds, the refresh copies
+  R seals there after an alarm no longer reach S.
+- A refresh a copy seals under a new number, with its own key and a
+  name it reads, moves S's writing epoch there. R alarms when it reads
+  the opening only if the number is one R watches (its own and the two
+  above its newest); a higher number R does not see at all.
+- A copy that keeps forging one higher-numbered refresh a week keeps the
+  receiver's own refreshes from opening: while the opening on that
+  higher number is queued, R's refreshes are read as handled and open
+  nothing, and are not opened later. Healing never starts for as long
+  as the copy writes, with no alarm; it starts once the copy stops.
+  While the copy writes, only re-verifying the contact in person ends
+  it.
+- A copy of R can open the refreshes R issued while S was away, and R
+  moves into the copy's epochs; R's later refreshes reach S only if R
+  saw something that alarmed.
+- A copy of S that writes at a notice-chain position before S does is
+  read, and S's record there is not, until the weekly current view
+  replaces it.
+- A copy can spend S's resources: each refresh it seals costs S a proof
+  search and an opening, more than 12 unanswered ones push out the
+  epochs with the lowest numbers, a copy of S's notices can push out
+  R's pending update keys (32 a direction), and what S's bounded table
+  of refreshes forgets is no longer checked.
+- A copy of R that seals a refresh under a very high number, and then
+  names the epoch S opens on it, makes every epoch below that number
+  last three periods only, also after the copy stops.
+- A copy of S that writes far ahead on a notice chain makes R give up
+  the positions S really uses until the direction moves to a new epoch.
+- An alarm depends on a record being read; if that record is lost,
+  nothing is raised.
+
+A copy of S also holds S's identity key and can sign cards as S at any
+version; that is impersonation through a stolen identity key, with or
+without cohorts, and outside the notice core.
+
 ## Not claimed
 
 Limits known today, so that a reviewer does not spend a week proving them:
 
-- The relay sees metadata: which mailbox tokens receive how much, and when. Sealed sender and padding reduce it; they do not remove it. Mailbox cohorts, in which every member downloads its cohort's whole batch and every device writes a fixed number of same-sized records on a fixed schedule, are planned; they would hide who writes to whom within a cohort, not cohort membership or when a device is online.
+- The relay sees metadata: which mailbox tokens receive how much, and when. Sealed sender and padding reduce it; they do not remove it. Mailbox cohorts, in which every member downloads its cohort's whole batch and every device writes a fixed number of same-sized records on a fixed schedule, are proposed and not in the app (ADR-081; their key delivery is the [Notice Core](protocols/notice-core.md), whose claims are above); they would hide who writes to whom within a cohort, not cohort membership or when a device is online.
 - The relay can correlate one fetcher's per-day requests by their timing on the immediate path; the delayed path spreads it. Until core!2060 (merged 2026-10-28) the requests also overlapped in yesterday's tokens across days, which made the fetcher a stable pseudonym (S4).
 - Three relay routes are addressed by an identity key or its hash: guardian sets, recovery proofs and purge. A recovery is visible metadata to the relay by design.
 - Token unlinkability is not forward secure: a mailbox token is a deterministic function of the channel's shared key, the recipient's key and the day, so whoever later obtains a contact's shared key can recompute every past token of that channel and link them in a retained log (S4).

@@ -17,6 +17,7 @@
 - [Keys and Cards](./protocols/keys-and-cards.md)
 - [Card Update and Sync](./protocols/update-and-sync.md)
 - [Relay](./protocols/relay.md)
+- [Notice Core (proposed)](./protocols/notice-core.md)
 - [Social Recovery](./protocols/social-recovery.md)
 
 # Reference

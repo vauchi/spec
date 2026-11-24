@@ -155,6 +155,59 @@ user granted.
   delta signature binds sender and recipient, S2); learn the owner's
   other contacts.
 
+## Against the notice core (proposed)
+
+The [Notice Core](protocols/notice-core.md), the key delivery of
+mailbox cohorts (ADR-081), is a proposed design and not in the app. It
+is designed against two attackers; its claims are under Notice core
+(proposed) in [Security Claims](claims.md#notice-core-proposed), and
+are reviewed claims, not shipped properties.
+
+### The gateway: both relays colluding, without keys
+
+Holds the outer relay and the application relay together (the
+chapter's G), and no device keys. The devices' clocks may be up to
+three days apart.
+
+- **Sees**: every write and every read of the cohort; which devices
+  registered in it and when each wrote (Relay A11).
+- **Can**: drop, delay, reorder and replay records; alter or inject
+  bytes; withhold acknowledgements, so that devices send again; deliver
+  an older refresh after a newer one, which moves the sender back for up
+  to a refresh period with no alarm. Dropping or delaying delays the
+  card until the next refresh period brings the view, the content and
+  an opening again; replays are dropped.
+- **Cannot** (claims): raise an alarm, or stop the receiver converging
+  on the latest card once it delivers again, while the clocks stay
+  within their bounds (P5); tell a control record from an update notice
+  or a dummy, link a direction's records, or learn who writes to whom
+  within a cohort (P6, argued for a gateway that watches, delays, drops
+  and replays, not for one that adapts its tampering to what it
+  observes).
+
+### A copy of a device
+
+Someone who copied the full state of the sender's or the receiver's
+device once, at one moment, and does not see state the device creates
+later (the chapter's T). Not defended: a copy the gateway helps, or an
+attacker who copies state again and again.
+
+- **A copy that only reads** the cohort: reads what the copied keys
+  still open. It holds superseded update keys only within the stated
+  windows (P2), and loses access to updates made afterwards once the
+  receiver has made a refresh after the copy, the sender has opened it,
+  the receiver has named the new epoch and the sender has followed that
+  name: up to about four refresh periods (P3).
+- **A copy that writes** records as well: the notice core promises best
+  effort only. It can take the sender's writing epoch; keep the
+  receiver's own refreshes from opening by forging one higher-numbered
+  refresh a week, so healing never starts while it writes, with no
+  alarm; trap the receiver in its epochs; hide a record until the
+  weekly view replaces it; spend the sender's resources; and shorten
+  what the sender keeps (Security Claims, Not claimed: a copy that
+  writes). A copy of the sender also holds the identity key and signs
+  cards as the sender, which is outside the notice core.
+
 ## Not an attacker here
 
 A platform vendor, the app stores, the operating system and the
