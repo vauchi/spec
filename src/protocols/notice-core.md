@@ -516,15 +516,19 @@ long as the epoch's `control` or `opening` key is.
 ## 3. The seal and the notice
 
 ```text
-mac key ‖ enc key = HKDF("", mk, "Vauchi_Notice_Seal_v7|siv", 64)
-iv      = HMAC(mac key, len(aad) (4) ‖ aad ‖ plaintext)[:16]
-sealed  = iv ‖ (plaintext XOR XChaCha20(enc key, nonce = iv ‖ 0^8,
-                                        counter = 0))
-notice  = tag (16) ‖ sealed (80)                    96 bytes, aad = tag
+key     = HKDF("", mk, "Vauchi_Notice_Seal_v8|aead", 32)
+sealed  = XChaCha20-Poly1305(key, nonce = 0^24, aad = tag, plaintext)
+        = ciphertext (64) ‖ authenticator (16)
+notice  = tag (16) ‖ sealed (80)                        96 bytes
 ```
 
-Opening recomputes `iv` and compares in constant time. The plaintext is
-64 bytes:
+The AEAD is the one every other Vauchi record uses, from the audited
+`chacha20poly1305` crate. The nonce is fixed because each `mk` seals one
+plaintext only; a key that sealed two different plaintexts would expose
+their XOR and let its authenticator be forged, so single use is part of
+what the seal rests on (section 2: a writer uses an address once).
+Opening fails unless the tag and the authenticator both match. The
+plaintext is 64 bytes:
 
 | Kind | Byte 0 | Bytes 1–32 | Bytes 33–63 |
 |---|---|---|---|

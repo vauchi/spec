@@ -85,7 +85,7 @@ Known-answer values and conformance schedules for the
 next to the protocol vectors; `check:vectors` fails this book when a
 copy below differs from Core's `main`.
 
-- `notice-core-vectors-v7.json`: one fixed set of inputs (device,
+- `notice-core-vectors-v8.json`: one fixed set of inputs (device,
   handshake, refresh and ephemeral private keys, an update key, a week)
   and what they give: the seed epoch's keys and ID, the first notice
   chain steps, refresh and opening addresses, the proof tag, an opened
@@ -108,10 +108,10 @@ copy below differs from Core's `main`.
   turns.
 
 Downloads:
-[notice-core-vectors-v7.json](vectors/notice-core-vectors-v7.json),
+[notice-core-vectors-v8.json](vectors/notice-core-vectors-v8.json),
 [notice-schedules-v1.json](vectors/notice-schedules-v1.json),
 [notice-conformance-expected-v1.json](vectors/notice-conformance-expected-v1.json).
 
 ```json
-{{#include vectors/notice-core-vectors-v7.json}}
+{{#include vectors/notice-core-vectors-v8.json}}
 ```

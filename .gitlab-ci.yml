@@ -111,7 +111,7 @@ check:vectors:
     - cmp /tmp/core-vectors.json src/vectors/vauchi-protocol-vectors-v1.json
     # The notice core's vectors and conformance schedules (ADR-081, proposed).
     - |
-      for f in notice-core-vectors-v7.json notice-schedules-v1.json notice-conformance-expected-v1.json; do
+      for f in notice-core-vectors-v8.json notice-schedules-v1.json notice-conformance-expected-v1.json; do
         wget -qO "/tmp/$f" "https://gitlab.com/vauchi/core/-/raw/main/vauchi-core/tests/fixtures/test-vectors/$f" || { echo "ERROR: fetching $f from Core main failed"; exit 1; }
         cmp "/tmp/$f" "src/vectors/$f" || { echo "ERROR: src/vectors/$f differs from Core main"; exit 1; }
       done
