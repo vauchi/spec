@@ -185,6 +185,12 @@ Extracted on 2026-10-28 from the security-claims page of vauchi.app/docs, itself
 
 ## Notice core (proposed)
 
+The goal these claims serve (ADR-081): Vauchi's relays cannot
+reconstruct who is in touch with whom, against the application relay
+alone and with the OHTTP relay, at every growth stage. The claims below
+cover the key delivery of one cohort; the other stages are in ADR-081's
+growth plan, not claimed here.
+
 These are reviewed claims about a proposed design, the
 [Notice Core](protocols/notice-core.md) of mailbox cohorts (ADR-081),
 not shipped properties: the design is implemented in Core behind the
