@@ -76,3 +76,42 @@ Download: [vauchi-protocol-vectors-v1.json](vectors/vauchi-protocol-vectors-v1.j
 ```json
 {{#include vectors/vauchi-protocol-vectors-v1.json}}
 ```
+
+## Notice core (proposed)
+
+Known-answer values and conformance schedules for the
+[Notice Core](./protocols/notice-core.md), a proposed protocol
+(ADR-081) that is not in the app. The canonical files live in Core
+next to the protocol vectors; `check:vectors` fails this book when a
+copy below differs from Core's `main`.
+
+- `notice-core-vectors-v7.json`: one fixed set of inputs (device,
+  handshake, refresh and ephemeral private keys, an update key, a week)
+  and what they give: the seed epoch's keys and ID, the first notice
+  chain steps, refresh and opening addresses, the proof tag, an opened
+  epoch with its confirmation and key ID, the plaintexts and sealed
+  bytes of an update, a refresh and an opening notice, and a body's
+  commitment and content records. Checked by Core's
+  `notice_key_schedule_tests.rs`, `notice_seal_tests.rs` and
+  `notice_content_tests.rs`.
+- `notice-schedules-v1.json`: 50 schedules of sessions for one
+  direction, 3,527 sessions in all: which device acts and at what
+  hour, which earlier writes the gateway delivers (so what it drops,
+  delays or replays), which delivered records it alters, whether the
+  write is acknowledged, and the edits.
+- `notice-conformance-expected-v1.json`: what an implementation written
+  from the protocol text alone, independently of Core, decided at each
+  of those sessions: records written, epochs kept, updates read and
+  alarms raised. Core's `notice_conformance_tests.rs` replays every
+  schedule and must decide the same. The schedules use unlimited
+  slots, so they do not exercise the session budget or the control
+  turns.
+
+Downloads:
+[notice-core-vectors-v7.json](vectors/notice-core-vectors-v7.json),
+[notice-schedules-v1.json](vectors/notice-schedules-v1.json),
+[notice-conformance-expected-v1.json](vectors/notice-conformance-expected-v1.json).
+
+```json
+{{#include vectors/notice-core-vectors-v7.json}}
+```

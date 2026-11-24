@@ -8,6 +8,17 @@ Each spec tag maps to the Core commit it was extracted from.
 
 ## Unreleased
 
+- Notice Core (proposed, ADR-081): a new protocol page for the key
+  delivery of mailbox cohorts, which is not in the app, extracted from
+  Core `3af62982a`, the commit three adversarial reviews last found no
+  relay-only alarm, stall or link in. Its claims (forward secrecy of
+  update keys, healing after a copy that only reads, convergence under
+  a gateway without keys, fixed session counts and sizes) and the
+  limits of a copy that writes are in Security Claims; its gateway and
+  copy adversaries in Attackers; its key-schedule vectors and 50
+  conformance schedules in Test Vectors. Relay A11 documents the four
+  cohort actions, off unless `RELAY_COHORT_STORE` is set
+  (vauchi/private#1281, core!2412, relay!623).
 - In-Person Exchange E9 and step 9 of the sequence: after a question,
   `BTH5` is shown for 10 seconds instead of 3, so the phone that
   answered and started its camera again can still read it; a phone that

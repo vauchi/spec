@@ -210,6 +210,35 @@ by default; the peer registry is never filled on the shipped relay
 (vauchi/private#835), so an offloaded blob is unreachable to its
 recipient.
 
+**A11. Mailbox cohorts (proposed, off by default)** (`cohort.rs`,
+`cohort_api.rs`; ADR-081, the [Notice Core](./notice-core.md)). The
+relay answers four actions only inside an OHTTP request, and only when
+`RELAY_COHORT_STORE` names a store (`memory` or a SQLite file); unset or
+empty, every cohort action answers `not_enabled`. No deployment sets it.
+
+- `cohort_register {cohort, device}`: adds a 32-byte device key to a
+  cohort of at most 330 devices (`cohort_full` past that).
+- `cohort_write {cohort, device, tier, class, slot, record}`: stores one
+  record in the current period of a tier (`fast`, 60 seconds;
+  `background`, 4 hours) at a numbered slot of its class (`notice`,
+  96 bytes, slots below 40 fast and 80 background; `content`, 576
+  bytes, below 2 and 5). The device must be in the cohort
+  (`not_in_cohort`), the record the class's size (`wrong_size`), the
+  slot in range (`no_such_slot`). The same bytes again answer `again`;
+  a slot may be replaced once (`replaced`), then `slot_used`.
+- `cohort_batch {cohort, tier, class, at}`: once the period holding
+  `at` has ended (`not_published` before), its record count, period
+  and number of chunks; `expired` 120 days after it ended.
+- `cohort_chunk {cohort, tier, class, period, index}`: chunk `index` of
+  that batch, 64,512 bytes of whole records in the order of their
+  bytes, the last zero-padded (`no_such_chunk` past the end). The order
+  says nothing of which device wrote a record or when.
+
+Every member downloads every chunk of its cohort's batch, so the relay
+does not learn which records a device reads. It does learn which
+devices registered in a cohort and when each wrote; see the Notice
+Core's claims.
+
 ### What the relay records
 
 Prometheus counters and gauges (`metrics.rs`): blobs created,
