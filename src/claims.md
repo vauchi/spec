@@ -194,7 +194,8 @@ S-number until they ship. Each holds only within the windows and
 conditions it states. The attackers are those of the chapter's section
 B, also listed in [Attackers](attackers.md): G, the gateway without
 keys, and T, a copy of a device's state taken once. The design these
-claims describe is Core `3af62982a`, which passed the project's review;
+claims describe is Core `3af62982a`, which passed the project's review
+and reached `main` as `adfb1f7d8` with the same notice code;
 a human cryptographer reviews it before release. Core's conformance
 schedules ([Test Vectors](vectors.md#notice-core-proposed)) check that
 Core decides what an independent implementation of the protocol text

@@ -5,9 +5,10 @@
 # Notice Core (proposed)
 
 > **Status: proposed (ADR-081), not in the app.** Extracted from
-> `vauchi/core` `3af62982a`, where it is implemented in `vauchi-core`
-> behind the `notice-core` feature and wired to nothing: no path of the
-> app calls it. The relay's cohort actions ([Relay](relay.md) A11)
+> `vauchi/core` `3af62982a`, the commit reviewed, which reached `main`
+> as `adfb1f7d8` with the same notice code. It is implemented in
+> `vauchi-core` behind the `notice-core` feature and wired to nothing: no
+> path of the app calls it. The relay's cohort actions ([Relay](relay.md) A11)
 > exist but are off unless `RELAY_COHORT_STORE` is set. The promises
 > below are reviewed claims about a proposed design, not shipped
 > properties; [Security Claims](../claims.md#notice-core-proposed)

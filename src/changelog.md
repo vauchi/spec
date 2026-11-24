@@ -10,7 +10,8 @@ Each spec tag maps to the Core commit it was extracted from.
 
 - Notice Core (proposed, ADR-081): a new protocol page for the key
   delivery of mailbox cohorts, which is not in the app, extracted from
-  Core `3af62982a`, the commit three adversarial reviews last found no
+  Core `3af62982a` (on `main` as `adfb1f7d8`, the same notice code), the
+  commit three adversarial reviews last found no
   relay-only alarm, stall or link in. Its claims (forward secrecy of
   update keys, healing after a copy that only reads, convergence under
   a gateway without keys, fixed session counts and sizes) and the
