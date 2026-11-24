@@ -8,6 +8,16 @@ Each spec tag maps to the Core commit it was extracted from.
 
 ## Unreleased
 
+- Social Recovery D (proposed, ADR-083): an identity moves to a
+  pre-committed next key that guardians rebuild in person. Every
+  in-person exchange carries a commitment to the next key; guardians'
+  shares travel as fixed-size blobs on every contact's device, with no
+  guardian set on the relay; a contact accepts a move only when the
+  revealed key matches its commitment, keeps the first, rekeys over C1
+  and C2 and refuses the old key. S16 is restated for the move
+  (proposed); S15 and S17 name the move as the remedy; Keys and Cards
+  A3 and G3 and the attackers' list follow. Nothing in Core yet
+  (vauchi/private#1392).
 - Notice Core (proposed, ADR-081): a new protocol page for the key
   delivery of mailbox cohorts, which is not in the app, extracted from
   Core `3af62982a` (on `main` as `adfb1f7d8`, the same notice code), the

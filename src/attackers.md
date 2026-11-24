@@ -124,8 +124,9 @@ recovering user.
 - **Cannot**: open the data once the storage master key is destroyed
   (S12, partial on the phones); open a backup without its password
   (S13); use the old device to make a contact accept a false recovery
-  when fewer than two of the helpers it counts are corrupt (S16,
-  partial); recover from fewer than the threshold of guardians (S17,
+  (S16, proposed: a contact moves only to the key its commitment names,
+  which no copy of the old seed holds; today no contact accepts a
+  recovery automatically); recover from fewer than the threshold of guardians (S17,
   partial).
 
 ## A coercer with the owner and the unlocked device

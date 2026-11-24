@@ -15,6 +15,12 @@
 
 ## Goal
 
+Section D (ADR-083, proposed, not built) replaces how a recovery reaches
+contacts: the owner moves to a pre-committed next key that guardians
+rebuild in person, and a contact checks it against the commitment it
+received at the exchange. Where D and parts A to C differ, D governs
+once it ships; the notes in A11, B, C and C3 say which parts it retires.
+
 A person who loses every device, and with it the seed, can get their
 identity and contacts back through people they chose in advance, with
 no password to remember; and a contact who hears "this new key is me"
@@ -29,13 +35,15 @@ stores the pieces can read none of them.
 - **Guardians**: contacts holding a sealed share; three to nine, or
   three to nine groups of one to three members.
 - **Helpers**: contacts who vouch in person that the old and new keys
-  are the same person; a guardian can be one.
+  are the same person; a guardian can be one. Retired by D: a vouch
+  authorizes nothing.
 - **Contact** (John): decides whether to accept the recovery.
 - **Thief**: holds the old device, with its identity key and every
   shared key on it.
 - **Relay**: stores sealed guardian entries and recovery proofs it
   cannot read, seeing only each proof's version byte and new key; the
-  attacker of both models owns it and the network.
+  attacker of both models owns it and the network. Under D the relay
+  holds no guardian set: shares travel as blobs between contacts.
 
 ---
 
@@ -328,6 +336,10 @@ same identity; it rekeys no contact.
 
 ### Recovery backup transport (A11, P33; implementation in progress)
 
+Under D, the shares handed back rebuild the next key as well as the
+backup key, and the restore ends in a move (D6), not in the same
+identity.
+
 The share is shown by QR and names the encrypted backup's SHA-256. A
 backup travels in the A7 piece encoding over the meeting's Bluetooth
 link; a receiver MUST accept a backup only when a taken share names its
@@ -444,6 +456,9 @@ the person being told (vauchi/private#929).
 ---
 
 ## B. Recovery vouching
+
+Retired by D once it ships: a contact accepts a moved identity only by
+the commitment check (D7); vouchers authorize nothing.
 
 ### Normative operations
 
@@ -615,6 +630,10 @@ of 2026-10-30:
 
 ## C. After recovery: the old contacts
 
+D replaces the rotation below (policy guardians, the certificate) with
+the move to the pre-committed next key; the rekey wire of C1 and C2
+stays and carries the move (D7).
+
 This section is compromise rotation: moving contacts to a new identity
 after a device holding the identity's keys was stolen unlocked
 (vauchi/private#796 P29). An ordinary recovery (A11, the password
@@ -692,7 +711,8 @@ compute these mailboxes and drain them (a relay fetch deletes). That
 delays a rekey; it can neither forge one nor learn the new key.
 
 **C3. Accepting** (`take_rekey_offer`, `take_rekey_offer_authorized`).
-The contact is not asked. Its device MUST accept an offer only with a
+Under D the authorization is the commitment check of D7, not a
+certificate. The contact is not asked. Its device MUST accept an offer only with a
 `RecoveryAuthorization` for it, and only the policy guardians' decision
 certificate will grant one (design P15, P18; vauchi/private#796). That
 certificate does not exist yet, so every offer MUST be dropped without a
@@ -763,6 +783,87 @@ this revocation to every contact, and without the tombstone no one
 could vouch for the real owner's recovery (vauchi/private#935). It is
 the deletion path's message (Keys and Cards, C3), usable after a
 recovery only while the old key is still in the owner's hands.
+
+## D. The move to the pre-committed next key (ADR-083; proposed, not built)
+
+**D1. The commitment.** Every identity has a current key and a next key
+`next_pk`. The commitment is
+`SHA-256("vauchi-next-identity-commitment-v1" || next_pk)`. It travels
+with the card at the in-person exchange, outside the QR code, and the
+contact stores it with the contact's key; device sync and the contact's
+backup carry it. The commitment MUST change only through a move (D6),
+never by a message the current key signs.
+
+**D2. The next seed.** The phone that makes the next seed keeps it
+under two locks: XChaCha20-Poly1305 under an Argon2id key from the app
+password, and a non-exportable hardware key held by the hardware shell
+(`CreateUserPresenceSecret`, `RevealUserPresenceSecret`). It MUST NOT
+enter a backup or device sync. Opening it needs the app password and is
+refused in a duress session. A desktop without a hardware keystore keeps
+the first lock alone.
+
+**D3. Share blobs.** The next seed and the backup key are split with
+Shamir at the social-recovery threshold (one guardian from each group,
+A). Every contact's device holds one sealed blob per contact, of one
+fixed size for every blob: a share for a guardian, filler for any other
+contact. It travels with updates or at an exchange and is kept in the
+holder's own backup. Nothing on the relay names a guardian.
+
+**D4. Guardian changes.** Adding or removing a guardian re-splits the
+same secret (D2's password required) and sends a new blob to every
+contact; each guardian's device replaces its old share. A guardian's
+device that has not received the update keeps the old share until it
+does.
+
+**D5. Release.** The owner's phone shows a recovery request. In person,
+a guardian's device opens the blob it holds for the owner; only if it is
+a share does it ask the guardian to confirm, face to face, that this is
+the owner, then hands the share over locally by QR (P33). A device
+holding filler says it has nothing to give.
+
+**D6. The move.** With enough shares (or the paper sheet, D10) the phone
+rebuilds `next_pk`'s seed and the backup key, makes the following next
+key and signs
+
+```text
+"VMV1" || old_pk(32) || next_pk(32) || next_commitment(32) || sig(64)
+sig = Ed25519(next_sk, "vauchi-identity-move-v1" || old_pk || next_pk || next_commitment)
+```
+
+It sends the move to every contact and again until each acknowledges
+it, as the registry handshake does; an offline contact receives it at
+the next in-person meeting. It then sends new blobs for the following
+next key (D3) and links the owner's other devices again in person.
+
+**D7. Accepting.** A contact accepts a move only when the commitment it
+holds for `old_pk` equals the hash of the revealed `next_pk` and the
+signature verifies. It then rekeys with the moved identity over C1 and
+C2, the offer signed by `next_pk`; stores `next_commitment`; keeps the
+contact's trust level (ADR-034 amendment); and from then on refuses
+anything signed by `old_pk`. A contact MUST keep the first valid move
+for a given `next_pk` and refuse any other move revealing it.
+
+**D8. Contacts without a commitment** (exchanged before D ships) confirm
+a moved identity only in person, through the reconnect.
+
+**D9. Notice.** A contact may opt in, on its own side, to be told that a
+contact's old identity was replaced; nothing is shown otherwise.
+
+**D10. Paper sheet.** An advanced option: 24 words with an optional
+passphrase kept apart; with a passphrase the next seed derives from both,
+as BIP39 does. Guardians' shares hold the same seed.
+
+### Security considerations (D)
+
+- A thief holding the old device or a copied backup cannot produce a
+  move: the next seed is on no copy and in no backup.
+- Two phones rebuilding the next key rebuild the same key; the fork rule
+  (D7) keeps one successor.
+- Limits: guardians acting together can move the identity; a contact
+  accepts the old key until it has the move; messages read before the
+  move stay read; the sheet (with its passphrase) is as good as the
+  guardians; a thief with the phone and the app password who meets
+  accomplices in person can add them as guardians.
 
 ## State machine
 

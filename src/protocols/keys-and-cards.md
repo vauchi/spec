@@ -150,7 +150,10 @@ input's meaning bumps the version in the string.
 - The seed is the identity. Anyone who holds it holds every key, past
   and future, on every device index; A3 means a linked device is a
   full copy, not a sub-identity (see E and [S15](../claims.md)).
-  Per-device subkeys that would contain a leak are tracked work.
+  Per-device subkeys that would contain a leak are tracked work. After a
+  leak the remedy is a move to the pre-committed next key (Social
+  Recovery D, ADR-083, proposed), whose commitment every in-person
+  exchange carries (Social Recovery D1).
 - A restore from an identity backup (D1) or a full backup (D4) joins
   the identity as a new device with a random device index, so two
   installs restored from one backup are two devices to the protocol,
@@ -735,7 +738,10 @@ derived and not stored, and device sync carries the transport (E), so every
 device shows the same level.
 
 `mark_fingerprint_verified` sets `Verified` and clears the recovered
-flag. The metrics behind the decision (transport, confidence, the
+flag. A move checked against the contact's commitment (Social Recovery
+D7, ADR-034 amendment) keeps the level and does not set the recovered
+flag; a moved identity confirmed in person without a commitment (D8)
+keeps today's rule. The metrics behind the decision (transport, confidence, the
 transport's proximity class, timestamp) are stored with the contact so
 the level is auditable.
 
