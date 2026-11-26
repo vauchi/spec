@@ -960,10 +960,11 @@ publication.
 
 ## 9. Not here
 
-- Bodies above 3,984 bytes. An avatar (ADR-042: at most 32 KB) needs
-  up to 63 records and many sessions; its publication, and how long R
-  may hold its key while it arrives, are designed with the avatar
-  work.
+- Bodies above 3,984 bytes. The amended avatar target is 8 KiB
+  (8,192 bytes, vauchi/private#806), before card serialization and the
+  signature envelope. Its larger-body publication, record count and
+  receiver key retention are designed with the avatar work. The earlier
+  32 KB estimates are not the target of this design.
 - The serialisation of the card body, group IDs, and what a version
   does at the top of its range, are Core's.
 - The seed handshake's message format inside the Core session.

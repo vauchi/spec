@@ -694,8 +694,12 @@ display name 1 to 100 characters after text normalisation; bio 160
 characters; 200 fields; a field's value 1 000 bytes; the whole card
 65 536 bytes of JSON. Limits enforced by truncation, not refusal: a
 field's label to 64 characters and its note to 500. The avatar is any
-common image, normalised to WebP of at most 32 768 bytes and 512 px
-(ADR-042). A field has a type (`Phone`, `Email`, `Social`,
+common image. Current Core `main` `e2e670675` normalises it to WebP of
+at most 32 768 bytes and 512 px. The accepted release target is lossy
+WebP of at most 8 KiB (8 192 bytes), normally 192 px, under ADR-042's
+2026-10-25 amendment; implementation remains open in vauchi/private#806.
+The amended limit is not yet enforced by the code described here.
+A field has a type (`Phone`, `Email`, `Social`,
 `Address`, `Website`, `Birthday`, `Custom`) with per-type validation
 (`field.rs`, `uri.rs`).
 
